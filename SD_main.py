@@ -242,7 +242,7 @@ def reciever_transmitter_thread():
             # check if traveling in the same direction
 
             # check if we're in proximity of hazard (1.5 miles)
-
+            #TEST CHANGE#########################################################
 
             # determine hazard // check hazard counter, determine  
 
