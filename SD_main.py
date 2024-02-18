@@ -286,7 +286,9 @@ def reciever_transmitter_thread():
     # time.sleep(1);
     # print(uart.readline());
 
+# 
 def received_packet():
+
 
 
 if __name__ == "__main__":

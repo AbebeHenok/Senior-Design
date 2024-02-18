@@ -1,0 +1,318 @@
+from deque import deque
+from machine import UART, Pin, I2C
+import busio
+import board
+from adafruit_lsm6ds.ism330dhcx import ISM330DHCX as ISM
+import time
+from time import sleep
+import _thread
+import math
+from mpy_decimal import *
+#import mpy_decimal
+import adafruit_gps
+import binascii
+import re
+import sys
+
+sys.path.append('adafruit_gps')
+import uasyncio as asyncio
+import adafruit_gps as as_GPS
+
+
+#################### Initailizing sensor communication protocols. ########################
+
+# Accelerometer/Gyroscope Module
+i2c = busio.I2C(scl=board.GP15, sda=board.GP14)
+accAndGyro = ISM(i2c)
+receivedString = None
+stringToTransmit = None
+onHighway = False
+hazard = False;
+warning = False;
+prevLon = 0
+prevLat = 0
+curLon = 0
+curLat = 0
+
+# LoRa module
+#uart =busio.UART(0,baudrate = 9600,stop = 1 ,tx = board.GP0, rx = board.GP1)
+
+# GPS Module
+# gpsMod = busio.UART( # FIll in here )
+################################################################################
+
+
+###################### Program begins here ######################################## 
+
+#global first, sec, three, four, five, sum1
+
+# lock will allow us to make sure both functions don't try to update the flagBit at the same time.
+lock  = _thread.allocate_lock()
+
+#FlagBit is flipped from zero to 1 if a hazard is detected.
+flagBit = 0
+
+#FlagCounter is what counts the amount of flags we currently have.
+flagCounter = 0
+
+
+async def test():
+    print('waiting for GPS data')
+    #await gps.data_received(position=True, altitude=True)
+    global prevLon
+    global prevLat
+    global currLon
+    global currLat
+    global warning
+    warning = False
+    prevLat = 0
+    prevLon = 0
+    currLat = 0
+    currLon = 0
+    while True:
+      #  print('Time: {}'.format(gps.time_string()))
+           
+        prevLat = currLat
+        prevLon = currLon
+
+      #  print('Latitude: {}'.format((gps.latitude(1))[0]))
+     #   print('Longitude: {}'.format((gps.longitude(1))[0]))
+     #   print('Speed: {}'.format(gps.speed_string(11)))
+        gpsSpeed = gps.speed_string(11)
+        speed = DecimalNumber(gpsSpeed[0: (len(gpsSpeed) - 4)])
+        currLat = DecimalNumber(str(gps.latitude(1)[0]))
+        currLon = DecimalNumber(str(gps.longitude(1)[0]))
+        #calibrating initial location
+        if(prevLat == 0):
+            prevLat = currLat
+            prevLon = currLon
+            continue
+        #indexLatDot = currLat.index('.')
+        #indexLonDot = currLat.index('.')
+        #currLat = (currLat[0:indexLatDot] + currLat[indexLatDot+1:len(currLat)])
+        #currLon = (currLon[0:indexLonDot] + currLon[indexLonDot+1:len(currLon)])
+        #currLat = DecimalNumber(currLat)
+        #currLon= DecimalNumber(currLon)
+       # print(speed)
+        print(prevLat)
+        print(prevLon)
+        print(currLat)
+        print(currLon)
+        #global lock, flagBit, flagCounter
+        
+        onHighway = False #initializing highway variable to be false.
+        
+        #Initialize GPS
+        
+        # GPS module will determine whether on Highway or not Highway
+        
+        #get latitude and longitude
+        #store previous latitude and longitude
+        #dist = from GPS long/l
+        
+        #DecimalNumber.set_scale(7)
+       # prevLat = DecimalNumber(3885315,5) #fromGPS
+       # currLat = DecimalNumber(388255,4)
+       # prevLon = DecimalNumber(-773117,4)
+       # currLon = DecimalNumber(-773154,4)
+        meanEarthRadius = DecimalNumber(str(3440.065))#km
+        period = 5 #polling rate for GPS
+        #dist = (math.acos(math.cos(math.radians(90 - prevLat)) * math.cos(math.radians(90- currLat)) + math.sin(math.radians(90 - prevLat)) * math.sin(math.radians(90 - currLat)) * math.cos(math.radians(prevLon - currLon))) * meanEarthRadius)  
+        #dist = (DecimalNumber.acos(DecimalNumber.cos((90 - prevLat)*DecimalNumber.pi()/180) * DecimalNumber.cos((90- currLat)*DecimalNumber.pi()/180) + DecimalNumber.sin((90 - prevLat)*DecimalNumber.pi()/180) * DecimalNumber.sin((90 - currLat)*DecimalNumber.pi()/180) * DecimalNumber.cos((prevLon - currLon)*DecimalNumber.pi()/180)) * meanEarthRadius)  
+        #speed = dist/period #get speed from GPS-alternative method
+        #print("estimate speed")
+       # print(speed)
+     
+            
+        #alternative, use if statements to compare degrees
+        #GETTING DIRECTION - GPS METHOD
+        #prevTangle = tAngle;
+        tAngle = 1 #fromGPS OR MANUAL
+        #IF STATEMENTS to SET DIRECTION
+       # speed = 60
+        print("checking speed > 55")
+        if speed > 55:
+            onHighway = True # if speed > 55, store direction EW or NS
+               #GETTING DIRECTION - COORDINATE METHOD
+            direction = 0 #0 = South, 1 = North, 2 = West, 3=East
+            lonDiff = currLon - prevLon;
+            latDiff = currLat - prevLat;
+            if abs(lonDiff) >= abs(latDiff): # Going East/West
+            
+                if lonDiff >= 0:#going East
+                    direction = 3
+                    print("going East")
+                else: #going West
+                    direction = 2
+                    print("going West")
+            else : # going North/South  
+                if latDiff >= 0:#going North
+                    direction = 1
+                    print("going North")
+                else: #going South
+                    direction = 0
+                    print("going South")
+        
+        
+        
+       #direction = 0 #0 = east, 1 = west, etc
+        print("checking onHighway")
+        if(onHighway):#start receiver thread and initialize sensor lists
+            print("On Highway")
+            _thread.start_new_thread(receiver_thread,())
+                    
+            DEQUE_SIZE = 5.0
+            
+            # Initializing deque (with an intended size of 5) for accelerometer x, y, and z values.
+            xAcc = deque(())
+            yAcc = deque(())
+            
+            # Initializing deque (with an intended size of 5) for gyroscope x, y, and z values.
+            xGyro = deque(())
+            yGyro = deque(())
+            zGyro = deque(())
+            
+            #if deque if full, calculate avg
+            #to read avg value, pop all into 5 variables, sum and avg and then readd them in same order. O(1)
+            xAccSum = 0.0
+            yAccSum = 0.0
+            zAccSum = 0.0
+            xGyroSum = 0.0
+            yGyroSum = 0.0
+            zGyroSum = 0.0
+            # While highway is true, continuously monitor the Accelerometer/Gyroscope.
+            while(onHighway):
+
+
+                accel = accAndGyro.acceleration    
+                gyro = accAndGyro.gyro
+                
+                #add x,y,z axis values to sum variables and append them to respective deques.
+                xAccSum += accel[0]; xAcc.append(accel[0]);
+                yAccSum += accel[1]; yAcc.append(accel[1]);
+                
+                xGyroSum += gyro[0]; xGyro.append(gyro[0]);
+                yGyroSum += gyro[1]; yGyro.append(gyro[1]);
+                zGyroSum += gyro[2]; zGyro.append(gyro[2]);    
+
+                
+                
+                #print(len(xAcc))
+                # Once the length of the deques has reached the maxlen, take the average.
+                if(len(xAcc) == 5):
+                    xAccSum -= xAcc.popleft();
+                    yAccSum -= yAcc.popleft();
+                   
+                    #print("Accel X: %.3f, Y: %.3f, Z: %.3f" %(xAccSum, yAccSum, zAccSum))
+
+                    # Average of acceleration in X axis
+                    xAcc_avg = xAccSum / DEQUE_SIZE
+                    yAcc_avg = yAccSum / DEQUE_SIZE
+                    
+                    average = (xAcc_avg, yAcc_avg)
+                    #print("Average Accel X: %.3f, Y: %.3f, Z: %.3f" %(average))
+                    #print("\n")
+                    xGyroSum -= xGyro.popleft();
+                    yGyroSum -= yGyro.popleft();
+                    zGyroSum -= zGyro.popleft();
+                    #print("Gyro X: %.3f, Y: %.3f, Z: %.3f" %(xGyroSum, yGyroSum, zGyroSum))
+
+                    # Average of gyro in axis
+                    xGyro_avg = xGyroSum / DEQUE_SIZE
+                    yGyro_avg = yGyroSum / DEQUE_SIZE
+                    zGyro_avg = zGyroSum / DEQUE_SIZE 
+                    average = (xGyro_avg, yGyro_avg, zGyro_avg)
+                    #print("Average Gyro X: %.3f, Y: %.3f, Z: %.3f" %(average))
+                    
+                   
+
+                    #active state
+                    if xAcc_avg < -3:
+                        #transmit
+                        warning = True
+                    if zGyro_avg > math.abs(0.4):
+                        #transmit
+                        warning = True
+                    if (direction == 0 or direction == 1):#stored at start of active mode: north or south
+                        if currDirection  > 1 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
+                            onHighway = false;
+                            direction = currDirection    
+                    elif direction == 2 or direction == 3 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
+                        if currDirection  < 2 and speed > 10:   #going north and south
+                            onHighway = false;
+                            direction = currDirection
+                    if hazard: #warn users w LED n buzzer
+                        hazard = False
+                time.sleep(period)
+        print(" about to await")
+        await asyncio.sleep(5)    
+
+            
+def receiver_thread():
+    global warning
+    global hazard
+    global receivedString
+    global transmittedString
+    uart =UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
+    #uart = UART.init(baudrate=9600, bits=8, parity=None, stop=1, Tx = 0, Rx = 1)
+    sensorReading = "1,0,30.0031,20.1241,W" # global string
+
+    uart.write(bytes("AT+MODE=TEST", "utf-8"))  #ATTEMPTING AT+MODE=TEST AUTO
+    print("Checking.. AT+MODE=TEST")
+    time.sleep(2);
+    uart.write(bytes("AT+TEST=RXLRPKT", "utf-8")) #set in receiver mode
+    line = uart.readline() #checking for messages from Lora module
+    line = uart.readline() #checking for messages from Lora module
+    line = uart.readline() #checking for messages from Lora module
+    while True:# keep recieving
+       
+        print("receiving")  
+        line = uart.readline() #checking for messages from Lora module
+        #print(line)
+        if warning:
+            break
+        elif line != None: #if there is a message
+            receivedString += uart.readline(); #compile/add to a string
+        elif receivedString != None and line == None: #uart message is finished
+            #analyze receivedString message
+            left = '"3C'  #PARSING STRING
+            right = '3E"'
+            dataRead = re.search(
+                r"" + left + "(.*?)" + right + "", receivedString
+            ).group(1)
+            clearstring = binascii.unhexlify(dataRead).decode("utf8")
+            print(clearstring)
+            letter_list = clearstring.split(",")
+            flag_str = letter_list[0]
+            hazard_str = letter_list[1]
+            gpsX_str = letter_list[2]
+            gpsY_str = letter_list[3]
+            dir_str = letter_list[4]
+            print("flag: " + flag_str)
+            print("hazard: " + hazard_str)
+            print("gpsX: " + gpsX_str)
+            print("gpsY: " + gpsY_str)
+            print("dir: " + dir_str)
+            time.sleep(5)
+
+            #still strings, need to convert + stick in object
+            
+            receivedString = None
+            
+        #if receivedString.length > 0, 
+  #  if hazard:
+    b = "AT+TEST=TXLRSTR "+bytes(binascii.hexlify(stringToTransmit.encode('utf-8'))).decode()
+    b = bytes(b,'utf-8') 
+    print(b.decode())
+    warning = False
+    
+     #   uart.write(b);  
+     #   while True:
+      #      time.sleep(1);
+       #     print(uart.readline());
+
+uart2 = UART(1, baudrate=9600, bits=8, stop=1, parity = None, tx=Pin(4), rx=Pin(5), timeout=300)
+sreader = asyncio.StreamReader(uart2)  # Create a StreamReader
+gps = as_GPS.AS_GPS(sreader)  # Instantiate GPS
+
+asyncio.run(test())
