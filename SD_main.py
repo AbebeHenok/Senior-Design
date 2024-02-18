@@ -211,6 +211,8 @@ def reciever_transmitter_thread():
     time.sleep(2)
     uart.write(bytes("AT+TEST=RXLRPKT", "utf-8")) #set in reciever mode
     
+
+
     while True:# keep recieving
         line = uart.readline() #checking for messages from Lora module
         if warning:
@@ -230,15 +232,15 @@ def reciever_transmitter_thread():
             letter_list = clearstring.split(",")    
             flag_str = letter_list[0]           #Flag bit value       
             hazard_str = letter_list[1]         #Hazard bit value
-            gpsX_str = letter_list[2]           # GPS val
-            gpsY_str = letter_list[3]           # GPS val
+            lat_str = letter_list[2]            # GPS val
+            lon_str = letter_list[3]            # GPS val
             dir_str = letter_list[4]            # Direction-  0: South, 1: North, 2: West, 3: East 
 
             #Printing strings of our received values
             print("flag " +  flag_str)
             print("hazard:" + hazard_str)
-            print("gpsX: " + gpsX_str)
-            print("gpsY: " + gpsY_str)
+            print("gpsX: " + lat_str)
+            print("gpsY: " + lon_str)
             print("dir: " + dir_str)
 
             ############### still strings, need to convert + stick in object type cast ##############
@@ -247,22 +249,20 @@ def reciever_transmitter_thread():
             flagBit_received = int(flag_str)             # Flag bit in integer format  --- local
             hazard_received = int(hazard_str)            # hazard bit in integer format --- local
 
-            lat_received = float(gpsX_str)                   # Latitude value
-            lon_received = float(gpsY_str)                   # Longtitude value
+            lat_received = float(lat_str)                   # Latitude value
+            lon_received = float(lon_str)                   # Longtitude value
             
         
             ################# determine direction from the received packet ########################
 
-            if(dir_received != direction):  # 
+            if(dir_received == direction):
                 pass
-            else:
-                continue
                 # check if the transmitter's location is behind or in front -- use GPS latitude and/or longtitude
-
+                
                 # If we are moving closer toward the hazard -- check hazard array
                 # If hazard array doesn't contain incident, save data into array
                 # else ignore
-
+                
                 # us being the car in front: lat = 160
                 # hazard received with lat = 120
 
@@ -270,6 +270,9 @@ def reciever_transmitter_thread():
                 # if(rec_lat - curLat < 0) :
                 # this for us.
                 # else we're moving away
+            else:
+                continue
+                
 
             # Transmission Code:      
             # if hazard:
@@ -282,6 +285,8 @@ def reciever_transmitter_thread():
     # while True:
     # time.sleep(1);
     # print(uart.readline());
+
+def received_packet():
 
 
 if __name__ == "__main__":
