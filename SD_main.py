@@ -30,6 +30,7 @@ accAndGyro = ISM(i2c)
 # lock will allow us to make sure both functions don't try to update the flagBit at the same time.
 lock  = _thread.allocate_lock()
 
+
 #FlagBit is flipped from zero to 1 if a hazard is detected.
 flagBit = 0
 
@@ -287,7 +288,7 @@ def reciever_transmitter_thread():
     # print(uart.readline());
 
 # 
-def received_packet():
+
 
 
 
