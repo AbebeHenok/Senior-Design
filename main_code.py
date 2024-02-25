@@ -22,10 +22,18 @@ import adafruit_gps as as_GPS
 
 
 #################### Initailizing sensor communication protocols. ########################
+# GPS module
+uart_GPS = UART(1, baudrate=9600, bits=8, stop=1, parity = None, tx=Pin(4), rx=Pin(5), timeout=300)
+sreader = asyncio.StreamReader(uart_GPS)  # Create a StreamReader
+gps = as_GPS.AS_GPS(sreader)  # Instantiate GPS
 
 # Accelerometer/Gyroscope Module
 i2c = busio.I2C(scl=board.GP15, sda=board.GP14)
 accAndGyro = ISM(i2c)
+
+# LoRa module
+#uart =busio.UART(0,baudrate = 9600,stop = 1 ,tx = board.GP0, rx = board.GP1)
+uart_lora =UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
 
 prevLon = 0
 prevLat = 0
@@ -61,9 +69,7 @@ reset = 0
 # Global Direction variable
 direction = 0
 
-# LoRa module
-#uart =busio.UART(0,baudrate = 9600,stop = 1 ,tx = board.GP0, rx = board.GP1)
-uart_lora =UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
+
 # GPS Module
 # gpsMod = busio.UART( # FIll in here )
 ################################################################################
@@ -209,20 +215,20 @@ async def test():
                 gyro = accAndGyro.gyro
                 
                 #add x,y,z axis values to sum variables and append them to respective deques.
-                xAccSum += accel[0]; xAcc.append(accel[0]);
-                yAccSum += accel[1]; yAcc.append(accel[1]);
+                xAccSum += accel[0]; xAcc.append(accel[0])
+                yAccSum += accel[1]; yAcc.append(accel[1])
                 
-                xGyroSum += gyro[0]; xGyro.append(gyro[0]);
-                yGyroSum += gyro[1]; yGyro.append(gyro[1]);
-                zGyroSum += gyro[2]; zGyro.append(gyro[2]);    
+                xGyroSum += gyro[0]; xGyro.append(gyro[0])
+                yGyroSum += gyro[1]; yGyro.append(gyro[1])
+                zGyroSum += gyro[2]; zGyro.append(gyro[2])    
 
                 
                 
                 #print(len(xAcc))
                 # Once the length of the deques has reached the maxlen, take the average.
                 if(len(xAcc) == 5):
-                    xAccSum -= xAcc.popleft();
-                    yAccSum -= yAcc.popleft();
+                    xAccSum -= xAcc.popleft()
+                    yAccSum -= yAcc.popleft()
                    
                     #print("Accel X: %.3f, Y: %.3f, Z: %.3f" %(xAccSum, yAccSum, zAccSum))
 
@@ -233,9 +239,9 @@ async def test():
                     average = (xAcc_avg, yAcc_avg)
                     #print("Average Accel X: %.3f, Y: %.3f, Z: %.3f" %(average))
                     #print("\n")
-                    xGyroSum -= xGyro.popleft();
-                    yGyroSum -= yGyro.popleft();
-                    zGyroSum -= zGyro.popleft();
+                    xGyroSum -= xGyro.popleft()
+                    yGyroSum -= yGyro.popleft()
+                    zGyroSum -= zGyro.popleft()
                     #print("Gyro X: %.3f, Y: %.3f, Z: %.3f" %(xGyroSum, yGyroSum, zGyroSum))
 
                     # Average of gyro in axis
@@ -256,7 +262,7 @@ async def test():
                         warning = True
                     if (direction == 0 or direction == 1):#stored at start of active mode: north or south
                         if currDirection  > 1 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
-                            onHighway = false;
+                            onHighway = False
                             direction = currDirection    
                     elif direction == 2 or direction == 3 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
                         if currDirection  < 2 and speed > 10:   #going north and south
@@ -353,8 +359,5 @@ def receiver_thread():
       #      time.sleep(1);
        #     print(uart.readline());
 
-uart2 = UART(1, baudrate=9600, bits=8, stop=1, parity = None, tx=Pin(4), rx=Pin(5), timeout=300)
-sreader = asyncio.StreamReader(uart2)  # Create a StreamReader
-gps = as_GPS.AS_GPS(sreader)  # Instantiate GPS
 
 asyncio.run(test())
