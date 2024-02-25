@@ -19,24 +19,51 @@ import uasyncio as asyncio
 import adafruit_gps as as_GPS
 
 
+
+
 #################### Initailizing sensor communication protocols. ########################
 
 # Accelerometer/Gyroscope Module
 i2c = busio.I2C(scl=board.GP15, sda=board.GP14)
 accAndGyro = ISM(i2c)
-receivedString = None
-stringToTransmit = None
-onHighway = False
-hazard = False;
-warning = False;
+
 prevLon = 0
 prevLat = 0
 curLon = 0
 curLat = 0
 
+
+
+#FlagBit is flipped from zero to 1 if a hazard is detected.
+flagBit = 0
+
+#FlagCounter is what counts the amount of flags we currently have.
+flagCounter = 0
+
+#Global Variables for received string. Initialized to an empty string.
+receivedString = ""
+
+#Global Variable for transmission string. Initialized to an empty string.
+stringToTransmit = ""
+
+#Boolean value for when on/off highway
+onHighway = False
+
+#hazard Flag. True = Hazard, False = No Hazard
+hazard = False
+
+#warning Flag
+warning = False
+
+#Reset bit: If reset flag is high, Hazard, flagBit, and flagCounter will be reset to default values
+reset = 0
+
+# Global Direction variable
+direction = 0
+
 # LoRa module
 #uart =busio.UART(0,baudrate = 9600,stop = 1 ,tx = board.GP0, rx = board.GP1)
-
+uart_lora =UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
 # GPS Module
 # gpsMod = busio.UART( # FIll in here )
 ################################################################################
@@ -44,16 +71,10 @@ curLat = 0
 
 ###################### Program begins here ######################################## 
 
-#global first, sec, three, four, five, sum1
-
 # lock will allow us to make sure both functions don't try to update the flagBit at the same time.
 lock  = _thread.allocate_lock()
 
-#FlagBit is flipped from zero to 1 if a hazard is detected.
-flagBit = 0
 
-#FlagCounter is what counts the amount of flags we currently have.
-flagCounter = 0
 
 
 async def test():
@@ -253,7 +274,7 @@ def receiver_thread():
     global hazard
     global receivedString
     global transmittedString
-    uart =UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
+    
     #uart = UART.init(baudrate=9600, bits=8, parity=None, stop=1, Tx = 0, Rx = 1)
     sensorReading = "1,0,30.0031,20.1241,W" # global string
 
@@ -285,8 +306,8 @@ def receiver_thread():
             letter_list = clearstring.split(",")
             flag_str = letter_list[0]
             hazard_str = letter_list[1]
-            gpsX_str = letter_list[2]
-            gpsY_str = letter_list[3]
+            lat_srt = letter_list[2]
+            lon_srt = letter_list[3]
             dir_str = letter_list[4]
             print("flag: " + flag_str)
             print("hazard: " + hazard_str)
@@ -295,9 +316,30 @@ def receiver_thread():
             print("dir: " + dir_str)
             time.sleep(5)
 
-            #still strings, need to convert + stick in object
+            dir_received = int(dir_str)                 # Direction in integer format  --- local
+            flagBit_received = int(flag_str)             # Flag bit in integer format  --- local
+            hazard_received = int(hazard_str)            # hazard bit in integer format --- local
+
+            lat_received = float(lat_str)                   # Latitude value
+            lon_received = float(lon_str)                   # Longtitude value
             
-            receivedString = None
+            if(dir_received == direction):
+                pass
+                # check if the transmitter's location is behind or in front -- use GPS latitude and/or longtitude
+                
+                # If we are moving closer toward the hazard -- check hazard array
+                # If hazard array doesn't contain incident, save data into array
+                # else ignore
+                
+                # us being the car in front: lat = 160
+                # hazard received with lat = 120
+
+                # Depending on direction:
+                # if(rec_lat - curLat < 0) :
+                # this for us.
+                # else we're moving away
+            else:
+                continue
             
         #if receivedString.length > 0, 
   #  if hazard:
