@@ -28,6 +28,7 @@ import uasyncio as asyncio
 import adafruit_gps as as_GPS
 
 
+
 #################### Initailizing sensor communication protocols. ########################
 # GPS module
 uart_GPS = UART(1, baudrate=9600, bits=8, stop=1, parity = None, tx=Pin(4), rx=Pin(5), timeout=300)
@@ -122,17 +123,11 @@ async def sensor_thread():
             prevLat = currLat
             prevLon = currLon
             continue
-        #indexLatDot = currLat.index('.')
-        #indexLonDot = currLat.index('.')
-        #currLat = (currLat[0:indexLatDot] + currLat[indexLatDot+1:len(currLat)])
-        #currLon = (currLon[0:indexLonDot] + currLon[indexLonDot+1:len(currLon)])
-        #currLat = DecimalNumber(currLat)
-        #currLon= DecimalNumber(currLon)
-       # print(speed)
-        print(prevLat)
-        print(prevLon)
-        print(currLat)
-        print(currLon)
+       
+        print("Prev Lat ", prevLat)
+        print("Prev lon ", prevLon)
+        print("Curr Lat ", currLat)
+        print("Curr Lon ", currLon)
         #global lock, flagBit, flagCounter
 
         onHighway = False #initializing highway variable to be false.
@@ -149,13 +144,6 @@ async def sensor_thread():
        # currLat = DecimalNumber(388255,4)
        # prevLon = DecimalNumber(-773117,4)
        # currLon = DecimalNumber(-773154,4)
-        meanEarthRadius = DecimalNumber(str(3440.065))#km
-        period = 5 #polling rate for GPS
-        #dist = (math.acos(math.cos(math.radians(90 - prevLat)) * math.cos(math.radians(90- currLat)) + math.sin(math.radians(90 - prevLat)) * math.sin(math.radians(90 - currLat)) * math.cos(math.radians(prevLon - currLon))) * meanEarthRadius)
-        #dist = (DecimalNumber.acos(DecimalNumber.cos((90 - prevLat)*DecimalNumber.pi()/180) * DecimalNumber.cos((90- currLat)*DecimalNumber.pi()/180) + DecimalNumber.sin((90 - prevLat)*DecimalNumber.pi()/180) * DecimalNumber.sin((90 - currLat)*DecimalNumber.pi()/180) * DecimalNumber.cos((prevLon - currLon)*DecimalNumber.pi()/180)) * meanEarthRadius)
-        #speed = dist/period #get speed from GPS-alternative method
-        #print("estimate speed")
-       # print(speed)
 
 
         #alternative, use if statements to compare degrees
@@ -239,39 +227,40 @@ async def sensor_thread():
 
                         lonDiff = currLon - prevLon
                         latDiff = currLat - prevLat
-                        if abs(lonDiff) >= abs(latDiff): # Going East/West
+                        with lock:
+                            if abs(lonDiff) >= abs(latDiff): # Going East/West
 
-                            if lonDiff >= 0:#going East
-                                currDirection = 3
-                                print("going East")
-                            elif lonDiff < 0: #going West
-                                currDirection = 2
-                                print("going West")
-                        else : # going North/South
-                            if latDiff >= 0:#going North
-                                currDirection = 1
-                                print("going North")
-                            elif latDiff < 0: #going South
-                                currDirection = 0
-                                print("going South")
+                                if lonDiff >= 0:#going East
+                                    currDirection = 3
+                                    print("going East")
+                                elif lonDiff < 0: #going West
+                                    currDirection = 2
+                                    print("going West")
+                            else : # going North/South
+                                if latDiff >= 0:#going North
+                                    currDirection = 1
+                                    print("going North")
+                                elif latDiff < 0: #going South
+                                    currDirection = 0
+                                    print("going South")
 
-                        #active state
-                        if xAcc.runAvg() < -3:
-                            #transmit
-                            print("XACC DETECTED")
-                            warning = True
-                        if abs(zGyro.runAvg()) > abs(0.4):
-                            print("ZGYRO DETECTED")
-                            warning = True
-                        if (direction == 0 or direction == 1):#stored at start of active mode: north or south
-                            if currDirection  > 1 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
-                                onHighway = False
-                                direction = currDirection
-                        elif direction == 2 or direction == 3 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
-                            if currDirection  < 2 and speed > 10:   #going north and south
-                                onHighway = False
-                                direction = currDirection
-                    time.sleep(period)
+                            #active state
+                            if xAcc.runAvg() < -3:
+                                #transmit
+                                print("XACC DETECTED")
+                                warning = True
+                            if abs(zGyro.runAvg()) > abs(0.4):
+                                print("ZGYRO DETECTED")
+                                warning = True
+                            if (direction == 0 or direction == 1):#stored at start of active mode: north or south
+                                if currDirection  > 1 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
+                                    onHighway = False
+                                    direction = currDirection
+                            elif direction == 2 or direction == 3 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
+                                if currDirection  < 2 and speed > 10:   #going north and south
+                                    onHighway = False
+                                    direction = currDirection
+                    
         print(" about to await")
         await asyncio.sleep(5)
 
@@ -328,43 +317,43 @@ def lora_thread():
             lat_received = DecimalNumber(lat_str)                   # Latitude value
             lon_received = DecimalNumber(lon_str)                   # Longtitude value
             
-            lock.acquire()
-            currHeading = False
-            if(dir_received == currDirection):
-                hazard_location = Hazard(lat_received,lon_received,flagBit_received)
-                # check if the transmitter's location is behind or in front -- use GPS latitude and/or longtitude
-                # DIRECTION KEY: 0 = South, 1 = North, 2 = West, 3=East
-                # SOUTH DIRECTION
-                if(currDirection == 0):
-                    if (lat_received - curLat < 0):    # CAR MOVING TOWARD HAZARD
-                        currHeading = True
-                # NORTH DIRECTION
-                if(currDirection == 1):
-                    if (lat_received - curLat > 0):    # CAR MOVING TOWARD HAZARD
-                        currHeading = True                    
-                # WEST DIRECTION
-                if(currDirection == 2):
-                    if (lon_received - curLon < 0):    # CAR MOVING TOWARD HAZARD
-                        currHeading = True
-                # EAST DIRECTION
-                if(currDirection == 3):
-                    if (lon_received - curLon < 0):    # CAR MOVING TOWARD HAZARD
-                        currHeading = True
-                    
-                if (currHeading == True):
-                    if(len(HazardArray) == 0):
-                        HazardArray.append(hazard_location)
-                    else:
-                        for check in HazardArray:
-                            if(check.lat == hazard_location.lat and check.lon == hazard_location.lon):    # NEED TO CHANGE TO A RANGE OF LAT & LON VALUES
-                                if(check.fcount < 3):
-                                    check.fcount = flagBit_received    # UPDATE COUNT VALUE IN HAZARD ARRAY
-                                    if(check.fcount > 2):
-                                        # WARN USER
-                                        hazard_flag = True
+            with lock:
+                currHeading = False
+                if(dir_received == currDirection):
+                    hazard_location = Hazard(lat_received,lon_received,flagBit_received)
+                    # check if the transmitter's location is behind or in front -- use GPS latitude and/or longtitude
+                    # DIRECTION KEY: 0 = South, 1 = North, 2 = West, 3=East
+                    # SOUTH DIRECTION
+                    if(currDirection == 0):
+                        if (lat_received - curLat < 0):    # CAR MOVING TOWARD HAZARD
+                            currHeading = True
+                    # NORTH DIRECTION
+                    if(currDirection == 1):
+                        if (lat_received - curLat > 0):    # CAR MOVING TOWARD HAZARD
+                            currHeading = True                    
+                    # WEST DIRECTION
+                    if(currDirection == 2):
+                        if (lon_received - curLon < 0):    # CAR MOVING TOWARD HAZARD
+                            currHeading = True
+                    # EAST DIRECTION
+                    if(currDirection == 3):
+                        if (lon_received - curLon < 0):    # CAR MOVING TOWARD HAZARD
+                            currHeading = True
+                        
+                    if (currHeading == True):
+                        if(len(HazardArray) == 0):
+                            HazardArray.append(hazard_location)
+                        else:
+                            for check in HazardArray:
+                                if(check.lat == hazard_location.lat and check.lon == hazard_location.lon):    # NEED TO CHANGE TO A RANGE OF LAT & LON VALUES
+                                    if(check.fcount < 3):
+                                        check.fcount = flagBit_received    # UPDATE COUNT VALUE IN HAZARD ARRAY
+                                        if(check.fcount > 2):
+                                            # WARN USER
+                                            hazard_flag = True
 
-                            else:
-                                HazardArray.append(hazard_location)
+                                else:
+                                    HazardArray.append(hazard_location)
                 else:
                     continue
         
@@ -373,7 +362,8 @@ def lora_thread():
         #     if timeout:
         #         break    
         if((hazard_flag == 1) or (flagBit == 1)):
-            transmit_hazard()
+            with lock:
+                transmit_hazard()
 ###################################################### End of LoRa Thread ##############################################################################################
        
 def transmit_flag_function() -> bool:
@@ -381,6 +371,7 @@ def transmit_flag_function() -> bool:
     return False
 # Transmit code for LoRa -- Called in LoRa thread when hazard flag or flagbit is high.
 def transmit_hazard():
+    lock.acquire()
     global sensorReading, flagBit, hazard, currLat, currLon, currDirection
     sensorReading = (str(flagBit) + " " + str(hazard) + " " + str(currLat) +  " " + str(currLon) +  " "+ str(currDirection))
     packet = "AT+TEST=TXLRSTR "+bytes(binascii.hexlify(sensorReading.encode('utf-8'))).decode()
@@ -401,7 +392,7 @@ def transmit_hazard():
     uart_lora.write(bytes("AT+MODE=RXLRPKT" , "utf-8"))
     while uart_lora.realine() != None:
         uart_lora.readline()
-
+    lock.release()
 
 
 # Possible function for Accelerometer/Gyroscope calibration.
