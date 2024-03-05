@@ -187,8 +187,6 @@ async def sensor_thread():
                     direction = 0
                     print("going South")
 
-
-
        #direction = 0 #0 = east, 1 = west, etc
         print("checking onHighway")
         if(onHighway):#start receiver thread and initialize sensor lists
@@ -280,8 +278,7 @@ async def sensor_thread():
             
 def lora_thread():
     global transmit_flag, hazard_flag, receivedString, sensorReading, currDirection, flagBit, flagCounter, currLat, currLon, HazardArray
-    
-    
+  
     #uart = UART.init(baudrate=9600, bits=8, parity=None, stop=1, Tx = 0, Rx = 1)
     # sensorReading = "1,0,30.0031,20.1241,W" # global string
     
