@@ -354,6 +354,14 @@ def lora_thread():
 
                                 else:
                                     HazardArray.append(hazard_location)
+                    else:
+                        inlist = False
+                        for check in HazardArray:
+                            if(check.lat == hazard_location.lat and check.lon == hazard_location.lon):    # NEED TO CHANGE TO A RANGE OF LAT & LON VALUES
+                                inlist = True
+                                index_location = HazardArray.index(check)
+                        if inlist:
+                            HazardArray.pop(index_location)
                 else:
                     continue
         
