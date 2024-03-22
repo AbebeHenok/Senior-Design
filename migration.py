@@ -214,11 +214,9 @@ async def sensor_thread():
                         if xAcc.runAvg() < -3:
                             #transmit
                             print("XACC DETECTED")
-                            hazard_flag = 1
                             transmit_flag = True
                         if abs(zGyro.runAvg()) > abs(0.4):
                             print("ZGYRO DETECTED")
-                            hazard_flag = 1
                             transmit_flag = True
                         if (direction == 0 or direction == 1):#stored at start of active mode: north or south
                             if currDirection  > 1 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
@@ -257,7 +255,7 @@ def lora_thread():
         if(not onHighway): #check if back to non-highway; kill thread.
             print("exiting receiver thread")
             _thread.exit()
-        elif((hazard_flag == 1) or (flagBit == 1)):#hazard detected
+        elif((hazard_flag == 1) or (flag_counter > 2)):#hazard detected
             with lock:
                 transmit_hazard()
         elif line != None: #if there is a message or continued message
@@ -323,7 +321,7 @@ def lora_thread():
                             for check in HazardArray:
                                 if(check.lat == hazard_location.lat and check.lon == hazard_location.lon):    # NEED TO CHANGE TO A RANGE OF LAT & LON VALUES
                                     if(check.fcount < 3):
-                                        check.fcount = flagBit_received    # UPDATE COUNT VALUE IN HAZARD ARRAY
+                                        check.fcount = flagCounter_received    # UPDATE COUNT VALUE IN HAZARD ARRAY
                                         if(check.fcount > 2):
                                             # WARN USER
                                             hazard_flag = True
