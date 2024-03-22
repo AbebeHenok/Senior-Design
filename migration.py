@@ -40,46 +40,45 @@ gps = as_GPS.AS_GPS(sreader)  # Instantiate GPS
 i2c = busio.I2C(scl=board.GP15, sda=board.GP14)
 accAndGyro = ISM(i2c)
 
-
 # LoRa module
 #uart =busio.UART(0,baudrate = 9600,stop = 1 ,tx = board.GP0, rx = board.GP1)
-#uart_lora =UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
+uart_lora = UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
 				
 #stores the current longitude/latitude and previous longitude/latitude measurements				
 prevLon = 0
 prevLat = 0
-curLon = 0
-curLat = 0
+currLon = 0
+currLat = 0
 		   
 
 # #FlagBit is flipped from zero to 1 if a hazard is detected.
-# flagBit = 0
+flagBit = 0
 # 
 # #FlagCounter is what counts the amount of flags we currently have.
-# flagCounter = 0
+flagCounter = 0
 # 
 # #Global Variables for received string. Initialized to an empty string.
-# receivedString = None
+receivedString = None
 # 
 # #Global Variable for transmission string. Initialized to an empty string.
 # sensorReading = ""
 # 
 # #Boolean value for when on/off highway
-# onHighway = False
+onHighway = False
 # 
 # # Checked to warn the driver - turn on LED and speakers
-# hazard_flag = False
+hazard_flag = False
 # 
 # #transmit flag - when hazardous behavior detected, set to true. Receiver thread checks if its true it will change mode to transmit.
-# transmit_flag = False
+transmit_flag = False
 # 
 # #Reset bit: If reset flag is high, Hazard, flagBit, and flagCounter will be reset to default values
 # reset = 0
 # 
 # # Global Direction variable
-# currDirection = 0
+currDirection = 0
 # 
-# HazardArray = []
+HazardArray = []
 
 # Hazard Class used describe a hazardous instance 
 class Hazard:
@@ -216,9 +215,11 @@ async def sensor_thread():
                             #transmit
                             print("XACC DETECTED")
                             hazard_flag = 1
+                            transmit_flag = True
                         if abs(zGyro.runAvg()) > abs(0.4):
                             print("ZGYRO DETECTED")
                             hazard_flag = 1
+                            transmit_flag = True
                         if (direction == 0 or direction == 1):#stored at start of active mode: north or south
                             if currDirection  > 1 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
                                 onHighway = False
@@ -236,15 +237,8 @@ async def sensor_thread():
 
             
 def lora_thread():
-    global warning
-    global hazard
-    global receivedString
-    global transmittedString
-    global direction
-    global currDirection
-    global onHighway
+    global hazard_flag, flagBit, transmitted_flag, receivedString, direction, currDirection, onHighway
     sensorReading = "1,0,30.0031,20.1241,W" # global string
-    uart_lora = UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
     uart_lora.write(bytes("AT+MODE=TEST", "utf-8"))  #ATTEMPTING AT+MODE=TEST AUTO
     receivedString = "" #RESET RECEIVED STRING
     print("Checking.. AT+MODE=TEST")
@@ -260,7 +254,7 @@ def lora_thread():
         #line += str(uart_lora.readline()) #checking for messages from Lora module
         #print(line)
         line = uart_lora.readline()
-        if(~onHighway): #check if back to non-highway; kill thread.
+        if(not onHighway): #check if back to non-highway; kill thread.
             print("exiting receiver thread")
             _thread.exit()
         elif((hazard_flag == 1) or (flagBit == 1)):#hazard detected
@@ -268,8 +262,9 @@ def lora_thread():
                 transmit_hazard()
         elif line != None: #if there is a message or continued message
             receivedString += str(line) #compile/add to a string
-        elif receivedString != None and line == None: #uart message is finished
+        elif receivedString != "" and line == None: #uart message is finished
             #analyze receivedString message
+            print("received message: ", receivedString)
             left = " \'"  #PARSING STRING
             right = "\' "
             dataRead = re.search(
@@ -280,14 +275,14 @@ def lora_thread():
             letter_list = clearstring.split(",")
             flag_str = letter_list[0]
             hazard_str = letter_list[1]
-            gpsX_str = letter_list[2]
-            gpsY_str = letter_list[3]
+            lat_str = letter_list[2]
+            lon_str = letter_list[3]
             dir_str = letter_list[4]
 
             print("flag: " + flag_str)
             print("hazard: " + hazard_str)
-            print("gpsX: " + gpsX_str)
-            print("gpsY: " + gpsY_str)
+            print("gpsX: " + lat_str)
+            print("gpsY: " + lon_str)
             print("dir: " + dir_str)
             time.sleep(5)
 
@@ -306,19 +301,19 @@ def lora_thread():
                     # DIRECTION KEY: 0 = South, 1 = North, 2 = West, 3=East
                     # SOUTH DIRECTION
                     if(currDirection == 0):
-                        if (lat_received - curLat < 0):    # CAR MOVING TOWARD HAZARD
+                        if (lat_received - currLat < 0):    # CAR MOVING TOWARD HAZARD
                             currHeading = True
                     # NORTH DIRECTION
                     if(currDirection == 1):
-                        if (lat_received - curLat > 0):    # CAR MOVING TOWARD HAZARD
+                        if (lat_received - currLat > 0):    # CAR MOVING TOWARD HAZARD
                             currHeading = True                    
                     # WEST DIRECTION
                     if(currDirection == 2):
-                        if (lon_received - curLon < 0):    # CAR MOVING TOWARD HAZARD
+                        if (lon_received - currLon < 0):    # CAR MOVING TOWARD HAZARD
                             currHeading = True
                     # EAST DIRECTION
                     if(currDirection == 3):
-                        if (lon_received - curLon < 0):    # CAR MOVING TOWARD HAZARD
+                        if (lon_received - currLon < 0):    # CAR MOVING TOWARD HAZARD
                             currHeading = True
                         
                     if (currHeading == True):
@@ -361,9 +356,11 @@ def lora_thread():
 # Transmit code for LoRa -- Called in LoRa thread when hazard flag or flagbit is high.
 def transmit_hazard():
     lock.acquire()
-    global sensorReading, flagBit, hazard, currLat, currLon, currDirection
-    sensorReading = (str(flagBit) + " " + str(hazard) + " " + str(currLat) +  " " + str(currLon) +  " "+ str(currDirection))
-    packet = "AT+TEST=TXLRSTR "+bytes(binascii.hexlify(sensorReading.encode('utf-8'))).decode()
+    #CHECK HAZARD ARRAY FOR HAZRARD IN SAME AREA AND DIRECTION, IF SO, SEND THAT DATA WITH +1 COUNTER. oTHERWISE NEW, 0 COUNTER
+    #ALSO, MAKE SURE TO RESET PREV LAT AND LON IF PAUSING SENSOR THREAD FOR STUFF
+    global flagBit, flagCounter, currLat, currLon, currDirection
+    transmit_String = (str(flagCounter) + "," + str(currLat) +  "," + str(currLon) +  ","+ str(currDirection)) #NEW HAZARD, COUNTER AT 0
+    packet = "AT+TEST=TXLRSTR "+bytes(binascii.hexlify(transmittedString.encode('utf-8'))).decode()
     packet = bytes(packet,'utf-8') 
     print(packet.decode())
     uart_lora.write(packet)
