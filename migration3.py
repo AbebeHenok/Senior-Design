@@ -331,7 +331,7 @@ def parse_message(receivedString):
         
         
 def fromAhead(hazard_location):
-    global currDirection
+    global currDirection, currLat, currLon
     with lock:
         if(hazard_location.direction == currDirection):           
             # check if the transmitter's location is behind or in front -- use GPS latitude and/or longtitude
@@ -367,7 +367,7 @@ def identify_hazard(hazard_location, transmitting):
             if(not fromAhead(check)): #TODO remove old data
                 HazardArray.pop(x)
                 continue
-            elif(check.lat == hazard_location.lat and check.lon == hazard_location.lon):    # NEED TO CHANGE TO A RANGE OF LAT & LON VALUES
+            elif((hazard_location.lat - 0.004) <= check.lat <= (hazard_location.lat + 0.004) and (hazard_location.lon - 0.004) <= check.lon <= (hazard_location.lon + 0.004)):  #within a quarter mile 
                     if(transmitting): #transmit code response (increment hazard once if indentified and return
                         if(check.flag_counter < 3)
                             check.flag_counter += 1 
