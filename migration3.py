@@ -75,7 +75,8 @@ class Hazard:
         self.lon = lon
         self.flag_counter = flag_counter
 		
-
+# lock will allow us to make sure both functions don't try to update the flagBit at the same time.
+lock  = _thread.allocate_lock()
 			
 									   
 																				
@@ -83,18 +84,12 @@ class Hazard:
 
 
 ###################### Program begins here ######################################## 
-
-# lock will allow us to make sure both functions don't try to update the flagBit at the same time.
-lock  = _thread.allocate_lock()
-asyncio.run(sensor_thread())
-
-
 						  
 async def sensor_thread():
     print('waiting for GPS data')
-    await gps.data_received(position=True, altitude=True)  
+    #await gps.data_received(position=True, altitude=True)  
     global prevLon, prevLat,currLon, currLat, warning, currDirection, onHighway
-    direction, prevLat, prevLon, currLat, currLon = (0,)*5        
+    direction, prevLat, prevLon, currLat, currLon = (1,)*5        
 	#onHighway indicates if vehicle is on highway.
     onHighway = False 
 		
@@ -380,3 +375,5 @@ def warn_user(hazard_location):
 def update_display(hazard_location):
     print("test")
 
+
+asyncio.run(sensor_thread())
