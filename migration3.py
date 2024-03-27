@@ -45,10 +45,7 @@ accAndGyro = ISM(i2c)
 uart_lora = UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
 				
 #stores the current longitude/latitude and previous longitude/latitude measurements				
-prevLon = 0
-prevLat = 0
-currLon = 0
-currLat = 0
+prevLon, prevLat, currLon, currLat = (0,)*4      
 		   
 # 
 # #FlagCounter is what counts the amount of flags we currently have.
@@ -102,9 +99,9 @@ asyncio.run(sensor_thread())
 						  
 async def sensor_thread():
     print('waiting for GPS data')
-    #await gps.data_received(position=True, altitude=True)  
+    await gps.data_received(position=True, altitude=True)  
     global prevLon, prevLat,currLon, currLat, warning, currDirection, onHighway
-    direction, prevLat, prevLon, currLat, currLon = (1,)*5        
+    direction, prevLat, prevLon, currLat, currLon = (0,)*5        
 	#onHighway indicates if vehicle is on highway.
     onHighway = False 
 		
