@@ -87,9 +87,9 @@ lock  = _thread.allocate_lock()
 						  
 async def sensor_thread():
     print('waiting for GPS data')
-    #await gps.data_received(position=True, altitude=True)  
+    await gps.data_received(position=True, altitude=True)  
     global prevLon, prevLat,currLon, currLat, warning, currDirection, onHighway
-    direction, prevLat, prevLon, currLat, currLon = (1,)*5        
+    direction, prevLat, prevLon, currLat, currLon = (0,)*5        
 	#onHighway indicates if vehicle is on highway.
     onHighway = False 
 		
