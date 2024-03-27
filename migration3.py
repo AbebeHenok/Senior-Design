@@ -369,7 +369,7 @@ def identify_hazard(hazard_location, transmitting):
                 continue
             elif((hazard_location.lat - 0.004) <= check.lat <= (hazard_location.lat + 0.004) and (hazard_location.lon - 0.004) <= check.lon <= (hazard_location.lon + 0.004)):  #within a quarter mile 
                     if(transmitting): #transmit code response (increment hazard once if indentified and return
-                        if(check.flag_counter < 3)
+                        if(check.flag_counter < 3):
                             check.flag_counter += 1 
                         return check
                     elif(check.flag_counter < hazard_location.flag_counter): #if hazard in array has a flag count > than what is alr in array, ignore it.
