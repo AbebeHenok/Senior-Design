@@ -1,3 +1,4 @@
+
 ############################## INTELLIGENT HIGHWAY HAZARD WARNING SYSTEM ############################## 
 #
 # Authors - Henok Abebe, David Ngo, Jhaysonel  Gueverra, Nhu Pham, Mohmmed Rahman, Anthony C Cruz
@@ -76,20 +77,16 @@ class Hazard:
         self.flag_counter = flag_counter
 		
 # lock will allow us to make sure both functions don't try to update the flagBit at the same time.
-lock  = _thread.allocate_lock()
-			
-									   
-																				
+lock  = _thread.allocate_lock()																				
 ################################################################################
-
 
 ###################### Program begins here ######################################## 
 						  
 async def sensor_thread():
     print('waiting for GPS data')
-    await gps.data_received(position=True, altitude=True)  
+    #await gps.data_received(position=True, altitude=True)  
     global prevLon, prevLat,currLon, currLat, warning, currDirection, onHighway
-    direction, prevLat, prevLon, currLat, currLon = (0,)*5        
+    direction, prevLat, prevLon, currLat, currLon = (1,)*5        
 	#onHighway indicates if vehicle is on highway.
     onHighway = False 
 		
@@ -148,38 +145,32 @@ async def sensor_thread():
             print("init sensor loop")
             DEQUE_SIZE = 5.0						 																																																																
             # Initializing deque (with an intended size of 5) for accelerometer x, y, and z values.
-            xAcc = deque(())
-            yAcc = deque(())
+            xAcc = deque(()); yAcc = deque(())
             
             # Initializing deque (with an intended size of 5) for gyroscope x, y, and z values.
-            xGyro = deque(())
-            yGyro = deque(())
-            zGyro = deque(())
+            xGyro = deque(()); yGyro = deque(()); zGyro = deque(())
     
             # While highway is true, continuously monitor the Accelerometer/Gyroscope.
-            # While highway is true, continuously monitor the Accelerometer/Gyroscope.
             while(onHighway):
-																			
-                    accel = accAndGyro.acceleration
-                    gyro = accAndGyro.gyro
+                print("onHighway - Sleeping")
+                time.sleep(.5) #TEMPORARY TODO																		
+                accel = accAndGyro.acceleration
+                gyro = accAndGyro.gyro
 
-                    #append x,y,z axis values  to respective deques.
-                    xAcc.append(accel[0]);yAcc.append(accel[1])
-                    xGyro.append(gyro[0]);yGyro.append(gyro[1]);zGyro.append(gyro[2]);
-
-
-									 
-																																																						
-                    # Once the length of the deques has reached the maxlen, take the average.
-                    if(len(xAcc) == 6):
-                        #remove oldest values
-                        xAcc.popleft();yAcc.popleft();
-                        xGyro.popleft();yGyro.popleft();zGyro.popleft();
-                        
-                        #set current direction
-                        lonDiff = currLon - prevLon
-                        latDiff = currLat - prevLat
-                        lock.acquire()
+                #append x,y,z axis values  to respective deques.
+                xAcc.append(accel[0]);yAcc.append(accel[1])
+                xGyro.append(gyro[0]);yGyro.append(gyro[1]);zGyro.append(gyro[2]);
+                                                                                                                                                                                       
+                # Once the length of the deques has reached the maxlen, take the average.
+                if(len(xAcc) == 6):
+                    #remove oldest values
+                    xAcc.popleft();yAcc.popleft();
+                    xGyro.popleft();yGyro.popleft();zGyro.popleft();
+                    
+                    #set current direction
+                    lonDiff = currLon - prevLon
+                    latDiff = currLat - prevLat
+                    with lock:
                         if abs(lonDiff) >= abs(latDiff): # Going East/West
                             if lonDiff >= 0:#going East
                                 currDirection = 3
@@ -187,7 +178,7 @@ async def sensor_thread():
                             elif lonDiff < 0: #going West
                                 currDirection = 2
                                 print("going West")
-                        else : # going North/South
+                        else: # going North/South
                             if latDiff >= 0:#going North
                                 currDirection = 1
                                 print("going North")
@@ -215,12 +206,9 @@ async def sensor_thread():
                                 onHighway = False
                                 direction = currDirection
                                 print("exiting highway.")
-                        lock.release()
-                    print("onHighway - sleeping")
-                    time.sleep(.3) #TEMPORARY TODO
-       print("offHighway - sleeping")
-       time.sleep(2)
-       #await asyncio.sleep(5)  
+                print("offHighway - Sleeping")
+                time.sleep(5) #TEMPORARY TODO
+  #  await asyncio.sleep(5)  
 
             
 def lora_thread():
@@ -254,26 +242,17 @@ def lora_thread():
             parse_message(receivedString)
             receivedString = None
             time.sleep(3)
-									  
-									  
-						 
-						   
-																		 
-					  
-								 
+									  								 
 ###################################################### End of LoRa Thread ##############################################################################################
-
-									 
-		
-				
+	
 # Transmit code for LoRa -- Called in LoRa thread when hazard flag or flagbit is high.
 def transmit_hazard(hazard_location):
     lock.acquire()
     #CHECK HAZARD ARRAY FOR HAZRARD IN SAME AREA AND DIRECTION, IF SO, SEND THAT DATA WITH +1 COUNTER. oTHERWISE NEW, 0 COUNTER
     #ALSO, MAKE SURE TO RESET PREV LAT AND LON IF PAUSING SENSOR THREAD FOR STUFF
     hazard_to_transmit = identify_hazard(hazard_location, True)
-    transmit_String = (str(hazard_to_transmit) + "," + str(currLat) +  "," + str(currLon) +  ","+ str(currDirection)) #NEW HAZARD, COUNTER AT 0
-    packet = "AT+TEST=TXLRSTR "+bytes(binascii.hexlify(transmittedString.encode('utf-8'))).decode()
+    transmit_String = (str(hazard_to_transmit.direction) + "," + str(hazard_to_transmit.lat) +  "," + str(hazard_to_transmit.lon) +  ","+ str(hazard_to_transmit.flag)) #NEW HAZARD, COUNTER AT 0
+    packet = "AT+TEST=TXLRSTR "+bytes(binascii.hexlify(transmit_String.encode('utf-8'))).decode()
     packet = bytes(packet,'utf-8') 
     print(packet.decode())
     uart_lora.write(packet)
@@ -343,6 +322,7 @@ def fromAhead(hazard_location):
 
     
 def identify_hazard(hazard_location, transmitting):
+    global HazardArray
     if(len(HazardArray) == 0):
         HazardArray.append(hazard_location)
         return hazard_location # no messages to identify, its new.
