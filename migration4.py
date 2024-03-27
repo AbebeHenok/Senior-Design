@@ -157,29 +157,29 @@ async def sensor_thread():
             zGyro = deque(())
     
             # While highway is true, continuously monitor the Accelerometer/Gyroscope.
+            # While highway is true, continuously monitor the Accelerometer/Gyroscope.
             while(onHighway):
-                print("onHighway - Sleeping")
-                time.sleep(.5) #TEMPORARY TODO																		
-                accel = accAndGyro.acceleration
-                gyro = accAndGyro.gyro
+																			
+                    accel = accAndGyro.acceleration
+                    gyro = accAndGyro.gyro
 
-                #append x,y,z axis values  to respective deques.
-                xAcc.append(accel[0]);yAcc.append(accel[1])
-                xGyro.append(gyro[0]);yGyro.append(gyro[1]);zGyro.append(gyro[2]);
+                    #append x,y,z axis values  to respective deques.
+                    xAcc.append(accel[0]);yAcc.append(accel[1])
+                    xGyro.append(gyro[0]);yGyro.append(gyro[1]);zGyro.append(gyro[2]);
 
 
-                                 
-                                                                                                                                                                                                                    
-                # Once the length of the deques has reached the maxlen, take the average.
-                if(len(xAcc) == 6):
-                    #remove oldest values
-                    xAcc.popleft();yAcc.popleft();
-                    xGyro.popleft();yGyro.popleft();zGyro.popleft();
-                    
-                    #set current direction
-                    lonDiff = currLon - prevLon
-                    latDiff = currLat - prevLat
-                    with lock:
+									 
+																																																						
+                    # Once the length of the deques has reached the maxlen, take the average.
+                    if(len(xAcc) == 6):
+                        #remove oldest values
+                        xAcc.popleft();yAcc.popleft();
+                        xGyro.popleft();yGyro.popleft();zGyro.popleft();
+                        
+                        #set current direction
+                        lonDiff = currLon - prevLon
+                        latDiff = currLat - prevLat
+                        lock.acquire()
                         if abs(lonDiff) >= abs(latDiff): # Going East/West
                             if lonDiff >= 0:#going East
                                 currDirection = 3
@@ -187,7 +187,7 @@ async def sensor_thread():
                             elif lonDiff < 0: #going West
                                 currDirection = 2
                                 print("going West")
-                        else: # going North/South
+                        else : # going North/South
                             if latDiff >= 0:#going North
                                 currDirection = 1
                                 print("going North")
@@ -215,10 +215,12 @@ async def sensor_thread():
                                 onHighway = False
                                 direction = currDirection
                                 print("exiting highway.")
-
-         print("offHighway - Sleeping")
-         time.sleep(5) #TEMPORARY TODO
-  #  await asyncio.sleep(5)  
+                        lock.release()
+                    print("onHighway - sleeping")
+                    time.sleep(.3) #TEMPORARY TODO
+       print("offHighway - sleeping")
+       time.sleep(2)
+       #await asyncio.sleep(5)  
 
             
 def lora_thread():
