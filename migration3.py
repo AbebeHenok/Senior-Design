@@ -96,7 +96,7 @@ class Hazard:
 
 # lock will allow us to make sure both functions don't try to update the flagBit at the same time.
 lock  = _thread.allocate_lock()
-
+asyncio.run(sensor_thread())
 
 
 						  
@@ -389,7 +389,4 @@ def warn_user(hazard_location):
 
 def update_display(hazard_location):
     print("test")
-
-asyncio.run(sensor_thread())
-
 
