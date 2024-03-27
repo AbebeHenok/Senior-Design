@@ -2,7 +2,7 @@
 #
 # Authors - Henok Abebe, David Ngo, Jhaysonel  Gueverra, Nhu Pham, Mohmmed Rahman, Anthony C Cruz
 # 
-# Description - This program is implemented to run on Raspberry Pi Pico with a LoRa module, 6 DOF Accelerometer/Gyroscope,
+# Discription - This program is implemented to run on Raspberry Pi Pico with a LoRa module, 6 DOF Accelerometer/Gyroscope,
 # and a GPS module. The program is meant to collect data from the GPS and Accelerometer/Gyroscope modules
 # and analyze drivers behavior on a highway. If the Accelerometer/Gyroscope module detects sudden changes, it will
 # raise the flagBit and increment the flagCounter. When a flagBit is raised, the program goes into the comm function
@@ -48,9 +48,6 @@ uart_lora = UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
 prevLon, prevLat, currLon, currLat = (0,)*4      
 		   
 # 
-# #FlagCounter is what counts the amount of flags we currently have.
-flagCounter = 0
-# 
 # #Global Variables for received string. Initialized to an empty string.
 receivedString = None
 # 
@@ -63,11 +60,7 @@ onHighway = False
 # # Checked to warn the driver - turn on LED and speakers
 hazard_flag = False
 # 
-# #transmit flag - when hazardous behavior detected, set to true. Receiver thread checks if its true it will change mode to transmit.
-transmit_flag = False
-# 
-# #Reset bit: If reset flag is high, Hazard, flagBit, and flagCounter will be reset to default values
-# reset = 0
+
 # 
 # # Global Direction variable
 currDirection = 0
