@@ -294,14 +294,16 @@ def transmit_hazard(hazard_location):
 def parse_message(receivedString):
     #TODO remember if message is a fluke, throw it away. also what if two messages conflict and the uart read is double the length.
     receivedString = str(receivedString)
-    print("receivedString: ", receivedString)
-    left = " \'"  #PARSING STRING
-    right = "\' "
+    #print("receivedString: ", receivedString)
+    left = " \""  #PARSING STRING
+    right = "\""
     dataRead = re.search(
         r"" + left + "(.*?)" + right + "", receivedString
     ).group(1)
-    clearstring = binascii.unhexlify(binascii.unhexlify(dataRead).decode("utf8"))
-    print(clearstring)
+    #print(dataRead)
+    dataRead = dataRead.strip()
+    clearstring = binascii.unhexlify(dataRead).decode("utf8")
+    #print(clearstring)
     letter_list = clearstring.split(",")
     
     dir_received = int(letter_list[0])                 # Direction in integer format  --- local
