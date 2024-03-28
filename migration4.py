@@ -44,7 +44,11 @@ accAndGyro = ISM(i2c)
 # LoRa module
 #uart =busio.UART(0,baudrate = 9600,stop = 1 ,tx = board.GP0, rx = board.GP1)
 uart_lora = UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
-				
+
+# Speaker
+speaker = machine.PWM(machine.Pin(14))
+speaker.duty_u16(0)
+
 #stores the current longitude/latitude and previous longitude/latitude measurements				
 prevLon, prevLat, currLon, currLat = (0,)*4      
 		   
@@ -67,6 +71,20 @@ hazard_flag = False
 currDirection = 0
 # 
 HazardArray = []
+
+#index in alarm sequence, timer for alarm
+alarm_seq = 0
+tim = None
+
+note_freq = {
+  "A4": 440,
+  "C5": 523,
+  "D5": 587,
+  "E5": 659,
+  "R": 100
+}
+tune = ["A4", "C5", "A4", "R"]
+
 
 # Hazard Class used describe a hazardous instance 
 class Hazard:
@@ -351,8 +369,39 @@ def identify_hazard(hazard_location, transmitting):
         return(hazard_location) #hazard not existing in array, treat it as a new message
     
     
-def warn_user(hazard_location):
-    print("test")
+
+def warn_user():
+    global tim
+    print("starting timer")
+    tim = Timer(period=500, mode=Timer.PERIODIC, callback=alarm)
+        
+    #tim.init(period=1000, mode=Timer.PERIODIC, callback=alarm)
+    #plays tune for 1s (period) per note.
+    
+    # one shot firing after 1000ms
+    #tim.init(mode=Timer.ONE_SHOT, period=1000, #callback=speaker_off)
+    
+def alarm(t):
+    global alarm_seq, tim
+    print(alarm_seq)
+    play_note(tune[alarm_seq])
+    alarm_seq += 1
+    if(alarm_seq == len(tune)):
+        print("ending timer")
+        tim.deinit()
+
+def play_note(note_name):
+    global speaker
+    frequency = note_freq[note_name]
+    if note_name == "R":
+        print("turning off speaker")
+        speaker.duty_u16(0)
+    else:
+        speaker.duty_u16(int(65535/2))
+    
+    speaker.freq(frequency)
+    
+    
 
 def update_display(hazard_location):
     print("test")
