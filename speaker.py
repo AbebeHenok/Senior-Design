@@ -43,6 +43,11 @@ def play_note(note_name, duration):
     
 # "
 
+
+def clearLCD():
+    LCD.fill(LCD.WHITE)
+    dot(dotx)
+    LCD.show_down()
   
 def hazard_fig():
     LCD.fill(LCD.WHITE)
@@ -138,23 +143,49 @@ def LCD0(x):
 if __name__ == "__main__":  
     LCD = LCD_3inch5()
     LCD.bl_ctrl(100)
-    LCD.fill(LCD.BLACK)
+    LCD.fill(LCD.WHITE)
     LCD.show_up()
     LCD.fill(LCD.WHITE)
     LCD.show_down()
     print("here")
+    
+    
+    prev = time.time()
+    t3 = 10000
     while True:
+        curr = time.time()
         
-        print("HEL")
-        LCD5(140)
-        LCD.show_up()
-
-        for note in tune:
-            play_note(note[0], note[1])
-            speaker.duty_u16(0)
-
-          
-
-            
-          
-
+        if(curr - prev >= 1):
+            prev = curr
+            t3 -= 1000
+            if(t3 == 9000):
+                LCD.fill(LCD.WHITE)
+                LCD0(dig1)
+                dot(dotx)
+                LCD1(dig2)
+                LCD.show_down()
+                
+            elif(t3 == 8000):
+                LCD.fill(LCD.WHITE)
+                LCD2(dig1)
+                dot(dotx)
+                LCD3(dig2)
+                LCD.show_down()
+            elif(t3 == 7000):
+                LCD.fill(LCD.WHITE)
+                LCD4(dig1)
+                dot(dotx)
+                LCD5(dig2)
+                LCD.show_down()
+            elif (t3 == 6000):
+                LCD.fill(LCD.WHITE)
+                LCD6(dig1)
+                dot(dotx)
+                LCD7(dig2)
+                LCD.show_down()
+            elif(t3 == 5000):
+                LCD.fill(LCD.WHITE)
+                LCD8(dig1)
+                dot(dotx)
+                LCD9(dig2)
+                LCD.show_down()    
