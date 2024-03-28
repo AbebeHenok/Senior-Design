@@ -301,6 +301,9 @@ def parse_message(receivedString):
         r"" + left + "(.*?)" + right + "", receivedString
     ).group(1)
     #print(dataRead)
+    if(dataRead == None):
+        print("error: parsed message not formatted)
+        return
     dataRead = dataRead.strip()
     clearstring = binascii.unhexlify(dataRead).decode("utf8")
     #print(clearstring)
