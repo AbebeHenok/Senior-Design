@@ -12,7 +12,7 @@
 #imports
 
 from deque import deque
-from machine import UART, Pin, SPI, PWM
+from machine import UART, Pin, SPI, PWM, Timer
 import busio
 import board
 from adafruit_lsm6ds.ism330dhcx import ISM330DHCX as ISM
@@ -408,9 +408,10 @@ def identify_hazard(hazard_location, transmitting):
     
 
 def warn_user():
-    global tim
+    global tim, display_hazard
     print("starting timer")
     tim = Timer(period=500, mode=Timer.PERIODIC, callback=alarm)
+    turnon_display(display_hazard)
     #tim.init(period=1000, mode=Timer.PERIODIC, callback=alarm)
     #plays tune for 1s (period) per note.
     
