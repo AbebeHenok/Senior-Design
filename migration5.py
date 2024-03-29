@@ -10,26 +10,25 @@
 # and will transmit the GPS coordinates, flagBit, and flagCounter values to other vehicles. 
 
 #imports
+
 from deque import deque
-from machine import UART, Pin, I2C, SPI, PWM
+from machine import UART, Pin, SPI, PWM
 import busio
 import board
 from adafruit_lsm6ds.ism330dhcx import ISM330DHCX as ISM
+#from time import sleep
 import time
-from time import sleep
 import _thread
-import math
-from mpy_decimal import *
-import adafruit_gps
-import binascii
-import re
-import sys
-sys.path.append('adafruit_gps')
+from math import sin, cos, acos, radians, asin
+from mpy_decimal import DecimalNumber
+#import adafruit_gps
+from binascii import hexlify, unhexlify
+from re import search
+#import sys
+#sys.path.append('adafruit_gps')
 import uasyncio as asyncio
 import adafruit_gps as as_GPS
-import framebuf
-import os
-from display import *
+from display import LCD_DISPLAY
 
 
 
@@ -46,14 +45,14 @@ accAndGyro = ISM(i2c)
 # LoRa module
 #uart =busio.UART(0,baudrate = 9600,stop = 1 ,tx = board.GP0, rx = board.GP1)
 uart_lora = UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
-
+backlight = Pin(13, mode=Pin.OUT)
 # Speaker
 speaker = machine.PWM(machine.Pin(14))
 speaker.duty_u16(0)
 
-#stores the current longitude/latitude and previous longitude/latitude measurements
+#stores the current longitude/latitude and previous longitude/latitude measurements				
 prevLon, prevLat, currLon, currLat = (0,)*4      
-
+		   
 # 
 # #Global Variables for received string. Initialized to an empty string.
 receivedString = None
@@ -88,11 +87,13 @@ note_freq = {
 tune = ["A4", "C5", "A4", "R"]
 
 #display state - true = on, false = off
-display_on = False
+#display_on = False
 #hazard on display
 display_hazard = None
-#display linger timer
+#display off timer
 display_timer = None
+display = LCD_DISPLAY()
+
 
 # Hazard Class used describe a hazardous instance 
 class Hazard:
@@ -101,8 +102,9 @@ class Hazard:
         self.lat = lat
         self.lon = lon
         self.flag_counter = flag_counter
+		
 # lock will allow us to make sure both functions don't try to update the flagBit at the same time.
-lock  = _thread.allocate_lock()
+lock  = _thread.allocate_lock()																				
 ################################################################################
 
 ###################### Program begins here ######################################## 
@@ -112,10 +114,12 @@ async def sensor_thread():
     #await gps.data_received(position=True, altitude=True)  
     global prevLon, prevLat,currLon, currLat, warning, currDirection, onHighway
     direction, prevLat, prevLon, currLat, currLon = (1,)*5        
-    #onHighway indicates if vehicle is on highway.
+	#onHighway indicates if vehicle is on highway.
     onHighway = False 
-    #direction stores the original direction of the vehicle once it enters the highway.
-    direction = 0
+		
+	#direction stores the original direction of the vehicle once it enters the highway.
+    direction = 0	
+	
     while True:
         prevLat = currLat
         prevLon = currLon
@@ -125,11 +129,11 @@ async def sensor_thread():
         currLon = DecimalNumber(str(gps.longitude(1)[0]))
         
         			
-#         print("Prev Lat ", prevLat)
-#         print("Prev lon ", prevLon)
-#         print("Curr Lat ", currLat)
-#         print("Curr Lon ", currLon)   
-#         print("speed: ", speed)
+        print("Prev Lat ", prevLat)
+        print("Prev lon ", prevLon)
+        print("Curr Lat ", currLat)
+        print("Curr Lon ", currLon)   
+        print("speed: ", speed)
         #calibrating initial location
         if(prevLat == 0):
             prevLat = currLat
@@ -147,17 +151,17 @@ async def sensor_thread():
             
                 if lonDiff >= 0:#going East
                     direction = 3
-#                     print("going East")
+                    print("going East")
                 else: #going West
                     direction = 2
-#                     print("going West")
+                    print("going West")
             else : # going North/South  
                 if latDiff >= 0:#going North
                     direction = 1
-#                     print("going North")
+                    print("going North")
                 else: #going South
                     direction = 0
-#                     print("going South")
+                    print("going South")
         
        #direction = 0 #0 = east, 1 = west, etc
         print("checking onHighway")
@@ -175,7 +179,7 @@ async def sensor_thread():
     
             # While highway is true, continuously monitor the Accelerometer/Gyroscope.
             while(onHighway):
-#                 print("onHighway - Sleeping")
+                print("onHighway - Sleeping")
                 time.sleep(.5) #TEMPORARY TODO																		
                 accel = accAndGyro.acceleration
                 gyro = accAndGyro.gyro
@@ -229,7 +233,7 @@ async def sensor_thread():
                                 onHighway = False
                                 direction = currDirection
                                 print("exiting highway.")
-#                 print("offHighway - Sleeping")
+                print("offHighway - Sleeping")
                 time.sleep(5) #TEMPORARY TODO
   #  await asyncio.sleep(5)  
 
@@ -239,7 +243,7 @@ def lora_thread():
     sensorReading = "1,0,30.0031,20.1241,W" # global string
     uart_lora.write(bytes("AT+MODE=TEST", "utf-8"))  #ATTEMPTING AT+MODE=TEST AUTO
     receivedString = None #RESET RECEIVED STRING
-    print("Checking+MODE=TEST")
+    print("Checking.. AT+MODE=TEST")
     time.sleep(1)
     print(uart_lora.read())
     uart_lora.write(bytes("AT+TEST=RXLRPKT", "utf-8")) #set in receiver mode
@@ -249,7 +253,7 @@ def lora_thread():
 #        uart_lora.readline()
     while True:# keep recieving
         time.sleep(1) #temporary TODO
-#         print("receiving")  
+        print("receiving")  
         #line += str(uart_lora.readline()) #checking for messages from Lora module
         #print(line)
         receivedString = uart_lora.read()
@@ -265,9 +269,9 @@ def lora_thread():
             parse_message(receivedString)
             receivedString = None
             time.sleep(3)
-
+									  								 
 ###################################################### End of LoRa Thread ##############################################################################################
-
+	
 # Transmit code for LoRa -- Called in LoRa thread when hazard flag or flagbit is high.
 def transmit_hazard(hazard_location):
     lock.acquire()
@@ -305,74 +309,42 @@ def parse_message(receivedString):
     dataRead = re.search(
         r"" + left + "(.*?)" + right + "", receivedString
     ).group(1)
-    if(dataRead == None):
-        print("error: parsed message not formatted")
-        return
-    print("data read: ",dataRead)
-    dataRead = dataRead.strip()
-    print(len(dataRead))
-    clearstring = binascii.unhexlify(binascii.unhexlify(dataRead).decode("utf-8")).decode("utf-8")
-    print("clear string: ", (clearstring))
-    letter_list = str(clearstring).split(",")
-    print("Letter List: ", letter_list)
-    dir_received = int(letter_list[0])                 # Direction in integer format  --- local
+    clearstring = binascii.unhexlify(binascii.unhexlify(dataRead).decode("utf8"))
+    print(clearstring)
+    letter_list = clearstring.split(",")
     
+    dir_received = int(letter_list[0])                 # Direction in integer format  --- local
     lat_received = DecimalNumber(letter_list[1])                   # Latitude value
     lon_received = DecimalNumber(letter_list[2])                   # Longtitude value
     flag_received = int(letter_list[3])             # Flag bit in integer format  --- local
     print("message: ", dir_received, ",", lat_received, ",", lon_received, ",", flag_received)
     hazard_location = Hazard(dir_received, lat_received,lon_received, flag_received)
-    print("Hazard Location: ", hazard_location)
     if(fromAhead(hazard_location)): #message is from a car up ahead going the same direction.
         identify_hazard(hazard_location, False) #change hazard reference to old message, if identified. Updates Hazard flag if apparent. 
         
         
-        
 def fromAhead(hazard_location):
     global currDirection, currLat, currLon
-    print("Current Lat: ", currLat)
-    print("Current Lon: ", currLon)
-    print("Current Direction: ", currDirection)
-    print("Hazad location lat: ", hazard_location.lat)
-    print("Hazard location lon: ", hazard_location.lon)
     with lock:
-        print("From head locked")
         if(hazard_location.direction == currDirection):           
             # check if the transmitter's location is behind or in front -- use GPS latitude and/or longtitude
             # DIRECTION KEY: 0 = South, 1 = North, 2 = West, 3=East
             # SOUTH DIRECTION
-            print("Hazard Received Matches Current Direction.")
             if(currDirection == 0):
-                print("Lat Distance Between Hazard and Current Location", (hazard_location.lat-currLat))
-                if (hazard_location.lat- currLat < 0):    # CAR MOVING TOWARD HAZARD
-                    print("hazard is south of current location")
+                if (hazard_location.lon- currLat < 0):    # CAR MOVING TOWARD HAZARD
                     return True
-                else:
-                    print("hazard is north of current location")
             # NORTH DIRECTION
             if(currDirection == 1):
-                print("Lat Distance Between Hazard and Current Location", (hazard_location.lat-currLat))
-                if (hazard_location.lat - currLat >= 0):    # CAR MOVING TOWARD HAZARD
-                    print("hazard is north of current location")
-                    return True
-                else:
-                    print("hazard is south of current location")
+                if (hazard_location.lat - currLat > 0):    # CAR MOVING TOWARD HAZARD
+                    return True                    
             # WEST DIRECTION
             elif(currDirection == 2):
-                print("Lon Distance Between Hazard and Current Location", (hazard_location.lon-currLon))
                 if (hazard_location.lon - currLon < 0):    # CAR MOVING TOWARD HAZARD
-                    print("hazard is west of current location")
                     return True
-                else:
-                    print("hazard is east of current location")
             # EAST DIRECTION
             elif(currDirection == 3):
-                print("Lon Distance Between Hazard and Current Location", (hazard_location.lon-currLon))
-                if (hazard_location.lon - currLon >= 0):    # CAR MOVING TOWARD HAZARD
-                   print("hazard is east of current location")
-                   return True
-                else:
-                   print("hazard is west of current location")
+                if (hazard_location.lon - currLon < 0):    # CAR MOVING TOWARD HAZARD
+                    return True
             return False
 
     
@@ -444,33 +416,27 @@ def play_note(note_name):
     speaker.freq(frequency)
     
     
-def disp_linger(t):
-    global display_timer
+def turnoff_display(t):
+    global display_timer, backlight
     #turn off display
     #LCD OFF
     display.clearLCD()
+    backlight.off()
     display_timer.deinit()
     
 def turnon_display(hazard_location):
-        
-    def get_digit(number, n):
-        return number // 10**n % 10
     global display_timer       
     #GPIO ON
+    backlight.on()
     display.hazard_fig()
     display.dot(215)
     display_timer = Timer(period=1000, mode=Timer.PERIODIC, callback=update_display)
 
 def update_display(t):
     global display_timer
-  #  if(not display_on):
-        #LCD.fill(LCD.WHITE) #use a transistor to disconnect display
-        #gpio 28 = 0
-  #      print("shutting down display.")
-  #      return
     if(not fromAhead(hazard_location)):
         #TODO set 0.0 at the top
-        display_timer = Timer(period=5000, mode=Timer.ONE_SHOT, callback=disp_linger)
+        display_timer = Timer(period=5000, mode=Timer.ONE_SHOT, callback=turnoff_display)
         display.LCD0(145)
         display.LCD0(230)
         return
@@ -481,11 +447,16 @@ def update_display(t):
             meanEarthRadius = DecimalNumber(str(3957.756))#miles
             dist = (math.acos(math.cos(math.radians(90 - currLat)) * math.cos(math.radians(90- hazard_location.lat)) + math.sin(math.radians(90 - currLat)) * math.sin(math.radians(90 - hazard_location.lat)) * math.cos(math.radians(currLon - hazard_location.lon))) * meanEarthRadius)  
             print(dist, " miles")
-            display.LCD9(145)
-            display.LCD5(230)
+            dist = str(dist)
+            dotIndex = dist.index(".")
+            firstDigit = dist[dotIndex -1:dotIndex]
+            secondDigit = dist[dotIndex + 1:dotIndex + 2]
+            display.LCD(145, firstDigit)
+            display.LCD(230, secondDigit)
             #show on display                     
         return
         #LCD 0.0
         #print LCD 0.0 for 5s and then delete
 
 asyncio.run(sensor_thread())
+
