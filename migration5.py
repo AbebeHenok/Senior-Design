@@ -323,28 +323,52 @@ def parse_message(receivedString):
         identify_hazard(hazard_location, False) #change hazard reference to old message, if identified. Updates Hazard flag if apparent. 
         
         
+      
 def fromAhead(hazard_location):
     global currDirection, currLat, currLon
+    print("Current Lat: ", currLat)
+    print("Current Lon: ", currLon)
+    print("Current Direction: ", currDirection)
+    print("Hazad location lat: ", hazard_location.lat)
+    print("Hazard location lon: ", hazard_location.lon)
     with lock:
+        print("From head locked")
         if(hazard_location.direction == currDirection):           
             # check if the transmitter's location is behind or in front -- use GPS latitude and/or longtitude
             # DIRECTION KEY: 0 = South, 1 = North, 2 = West, 3=East
             # SOUTH DIRECTION
+            print("Hazard Received Matches Current Direction.")
             if(currDirection == 0):
-                if (hazard_location.lon- currLat < 0):    # CAR MOVING TOWARD HAZARD
+                print("Lat Distance Between Hazard and Current Location", (hazard_location.lat-currLat))
+                if (hazard_location.lat- currLat < 0):    # CAR MOVING TOWARD HAZARD
+                    print("hazard is south of current location")
                     return True
+                else:
+                    print("hazard is north of current location")
             # NORTH DIRECTION
             if(currDirection == 1):
-                if (hazard_location.lat - currLat > 0):    # CAR MOVING TOWARD HAZARD
-                    return True                    
+                print("Lat Distance Between Hazard and Current Location", (hazard_location.lat-currLat))
+                if (hazard_location.lat - currLat >= 0):    # CAR MOVING TOWARD HAZARD
+                    print("hazard is north of current location")
+                    return True
+                else:
+                    print("hazard is south of current location")
             # WEST DIRECTION
             elif(currDirection == 2):
+                print("Lon Distance Between Hazard and Current Location", (hazard_location.lon-currLon))
                 if (hazard_location.lon - currLon < 0):    # CAR MOVING TOWARD HAZARD
+                    print("hazard is west of current location")
                     return True
+                else:
+                    print("hazard is east of current location")
             # EAST DIRECTION
             elif(currDirection == 3):
-                if (hazard_location.lon - currLon < 0):    # CAR MOVING TOWARD HAZARD
-                    return True
+                print("Lon Distance Between Hazard and Current Location", (hazard_location.lon-currLon))
+                if (hazard_location.lon - currLon >= 0):    # CAR MOVING TOWARD HAZARD
+                   print("hazard is east of current location")
+                   return True
+                else:
+                   print("hazard is west of current location")
             return False
 
     
