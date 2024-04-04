@@ -1,71 +1,85 @@
-import machine
+from machine import mem32,Pin, I2C
+from display import LCD_DISPLAY
 import time
-import uctypes
-import ustruct
 
-I2C_SLAVE_ADDRESS = 0x17
-I2C_BAUDRATE = 100000
 
-I2C_SLAVE_SDA_PIN = machine.Pin(0)
-I2C_SLAVE_SCL_PIN = machine.Pin(1)
+if __name__ == "__main__":
+    import utime
+    from machine import mem32
+    from i2cSlave import i2c_slave
 
-context = uctypes.struct(
-    {
-        "mem": uctypes.ARRAY(uctypes.UINT8 | 0, 256),
-        "mem_address": uctypes.UINT8 | 256,
-        "mem_address_written": uctypes.BOOL,
-    },
-    ptr=uctypes.addressof(uctypes.bytearray_at(0x20000000, 256)),
-)
+    display = LCD_DISPLAY()
+    led = Pin(25, Pin.OUT)
+    backlight = Pin(13, Pin.IN)
+    slavescl = Pin(0, Pin.PULL_UP)
+    slavesda = Pin(1,  Pin.PULL_UP)
+    #masterscl = Pin(3,  Pin.PULL_UP)
+    #mastersda = Pin(2, Pin.PULL_UP)
+    s_i2c = i2c_slave(0,sda=1,scl=0,slaveAddress=0x41)
+    #masteri2c = I2C(1, freq=100000, scl=Pin(3), sda=Pin(2), timeout=100000)
+    time.sleep(1)        
+    #print(masteri2c.scan())
+    
+#receive z, turn lcd on
+# recieve x, turn lcd off
+    isFirstDigit = True
+    try:
+        #while True:
+#                 #masteri2c.writeto(0x41, '1')
+            #time.sleep(2)
+            #led.toggle()
+            #string = chr(s_i2c.get())
+            string = 'l'
+            if string == 'o':
+                print("turning on display")
+                backlight.on()
+                display.clearLCD()
+                display.dot(215)
+                isFirstDigit = True               
+            elif string == 'f':
+                print("turning off display")
+                backlight.off()
+                display.clearLCD()
 
-def i2c_slave_handler(i2c, event):
-    global context
-    if event == machine.I2C.RECEIVED:
-        if not context.mem_address_written:
-            context.mem_address = i2c.readfrom(1)[0]
-            context.mem_address_written = True
-        else:
-            context.mem[context.mem_address] = i2c.readfrom(1)[0]
-            context.mem_address += 1
-    elif event == machine.I2C.REQUEST:
-        i2c.writeto(bytes([context.mem[context.mem_address]]))
-        context.mem_address += 1
-    elif event == machine.I2C.FINISHED:
-        context.mem_address_written = False
+            elif string == 'l' or string == 'r' or string == 'b':
+                isFirstDigit = True
+                display.hazard_fig(string)
+                
+            else:
+                if string == '0':   
+                    print(isFirstDigit, string)
+                    display.LCD(isFirstDigit, string)
+                elif string == '1':
+                    print(isFirstDigit, string)
+                    display.LCD(isFirstDigit, string)
+                elif string == '2':
+                    print(isFirstDigit, string)
+                    display.LCD(isFirstDigit, string)
+                elif string == '3':
+                    print(isFirstDigit, string)
+                    display.LCD(isFirstDigit, string)
+                elif string == '4':
+                    print(isFirstDigit, string)
+                    display.LCD(isFirstDigit, string)
+                elif string == '5':
+                    print(isFirstDigit, string)
+                    display.LCD(isFirstDigit, string)
+                elif string == '6':
+                    print(isFirstDigit, string)
+                    display.LCD(isFirstDigit, string)
+                elif string == '7':
+                    print(isFirstDigit, string)
+                    display.LCD(isFirstDigit, string)
+                elif string == '8':
+                    print(isFirstDigit, string)
+                    display.LCD(isFirstDigit, string)
+                elif string == '9':
+                    print(isFirstDigit, string)
+                    display.LCD(isFirstDigit, string)
+                else:
+                    print("not number")
+                isFirstDigit = not isFirstDigit
+    except KeyboardInterrupt:
+        pass
+        
 
-def setup_slave():
-    i2c_slave = machine.I2C(0, sda=I2C_SLAVE_SDA_PIN, scl=I2C_SLAVE_SCL_PIN, freq=I2C_BAUDRATE)
-    i2c_slave.set_as_slave(I2C_SLAVE_ADDRESS, handler=i2c_slave_handler)
-
-def run_master():
-    I2C_MASTER_SDA_PIN = machine.Pin(6)
-    I2C_MASTER_SCL_PIN = machine.Pin(7)
-
-    i2c_master = machine.I2C(1, sda=I2C_MASTER_SDA_PIN, scl=I2C_MASTER_SCL_PIN, freq=I2C_BAUDRATE)
-
-    for mem_address in range(0, 256, 32):
-        msg = "Hello, I2C slave! - 0x{:02X}".format(mem_address)
-        msg_len = len(msg)
-
-        buf = bytearray(32)
-        buf[0] = mem_address
-        buf[1:msg_len + 1] = msg.encode()
-        print("Write at 0x{:02X}: '{}'".format(mem_address, msg))
-        count = i2c_master.writeto(I2C_SLAVE_ADDRESS, buf, False)
-        if count < 0:
-            print("Couldn't write to slave, please check your wiring!")
-            return
-
-        i2c_master.writeto(I2C_SLAVE_ADDRESS, bytes([mem_address]), True)
-        split = 5
-        buf = i2c_master.readfrom(I2C_SLAVE_ADDRESS, split, True)
-        print("Read  at 0x{:02X}: '{}'".format(mem_address, buf.decode()))
-        buf = i2c_master.readfrom(I2C_SLAVE_ADDRESS, msg_len - split, False)
-        print("Read  at 0x{:02X}: '{}'".format(mem_address + split, buf.decode()))
-
-        print("")
-        time.sleep(2)
-
-print("\nI2C slave example")
-setup_slave()
-run_master()
