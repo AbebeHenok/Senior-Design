@@ -1,51 +1,20 @@
 from machine import Pin,SPI,PWM
 import framebuf
-import time
-import os
-# from main_3inch5 import *
-# from sdcard import *
 from lcd import *
 
 
-#dimensions of a segment digit?
-rSeg = 50 #x coordinate of the 2 rightmost segments.
-#lSeg = 0 #x coordinate of the 2 leftmost segments.
-segWidth = 10 #segment width
-segHeight= 50 #segment height
-segTop = 5 #height where top segment starts
-segBottom = 105
-
-
-
-
-note_freq = {
-  "A4": 440,
-  "C5": 523,
-  "D5": 587,
-  "E5": 659,
-  "R": 100
-}
-tune = [["D5", 0.5], ["C5", 0.5], ["D5", 0.5], ["R", 0.5], ["D5", 0.5], ["C5", 0.5], ["D5", 0.5],
-         ["R", 0.5], ["D5", 0.5], ["C5", 0.5], ["A4", 0.5], ["C5", 0.5], ["E5", 0.5], ["C5", 0.5], ["D5", 2]]
-speaker = machine.PWM(machine.Pin(14))  
-def play_note(note_name, duration):
-    frequancy = note_freq[note_name]
-    if note_name == "R":
-        speaker.duty_u16(0)
-    else:
-        speaker.duty_u16(int(65535/2))
-    
-    speaker.freq(frequancy)
-    time.sleep(duration)
-    
-# 
-
-class LCD_DiSPLAY:
-    
+class LCD_DISPLAY:
     dig1 = 145 #x cordiniate of the first digit
     dig2 = 230 # x coordinate of the second digit
     dotx = 215
-    
+     #dimensions of a segment digit?
+    rSeg = 50 #x coordinate of the 2 rightmost segments.
+    #lSeg = 0 #x coordinate of the 2 leftmost segments.
+    segWidth = 10 #segment width
+    segHeight= 50 #segment height
+    segTop = 5 #height where top segment starts
+    segBottom = 105
+   
     def __init__(self):
         LCD = LCD_3inch5()
         LCD.bl_ctrl(100)
@@ -59,17 +28,47 @@ class LCD_DiSPLAY:
         dot(dotx)
         LCD.show_down()
       
-    def hazard_fig():
+    def hazard_fig(string):
         LCD.fill(LCD.WHITE)
-
-        LCD.fill_rect(145,3,175,175, LCD.RED)
+        if(string == 'b'):
+            LCD.fill_rect(145,3,175,175, LCD.BLUE)
+        elif(string == 'l'):
+            LCD.fill_rect(145,3,175,175, LCD.GREEN)
+        elif(string == 'r'):
+            LCD.fill_rect(145,3,175,175, LCD.RED)
         LCD.fill_rect(160,18, 145, 145, LCD.WHITE)
         LCD.fill_rect(225, 25, 15, 80, LCD.BLACK)
-
         LCD.fill_rect(225, 110, 15, 15 , LCD.BLACK)
 
         LCD.show_up()
 
+    def LCD(isFirstDigit, digit):
+        x = 0
+        if(isFirstDigit):
+            x = 145
+        else:
+            x = 230
+        if (int(digit) == 0):
+            LCD0(x)
+        elif (int(digit) == 1):
+            LCD1(x)
+        elif (int(digit) == 2):
+            LCD2(x)
+        elif (int(digit) == 3):
+            LCD3(x)
+        elif (int(digit) == 4):
+            LCD4(x)
+        elif (int(digit) == 5):
+            LCD5(x)
+        elif (int(digit) == 6):
+            LCD6(x)
+        elif (int(digit) == 7):
+            LCD7(x)
+        elif (int(digit) == 8):
+            LCD8(x)
+        elif (int(digit) == 9):
+            LCD9(x)
+            
     def dot(x):
         LCD.fill_rect(x, segBottom, segWidth, segWidth, LCD.BLACK)
         
