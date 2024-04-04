@@ -29,12 +29,12 @@ if __name__ == "__main__":
             #time.sleep(2)
             #led.toggle()
             #string = chr(s_i2c.get())
-            string = 'l'
+            string = 'o'
             if string == 'o':
                 print("turning on display")
                 backlight.on()
                 display.clearLCD()
-                display.dot(215)
+                display.dot()
                 isFirstDigit = True               
             elif string == 'f':
                 print("turning off display")
