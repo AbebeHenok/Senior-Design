@@ -24,12 +24,12 @@ if __name__ == "__main__":
 # recieve x, turn lcd off
     isFirstDigit = True
     try:
-        #while True:
+        while True:
 #                 #masteri2c.writeto(0x41, '1')
             #time.sleep(2)
             #led.toggle()
-            #string = chr(s_i2c.get())
-            string = 'o'
+            string = chr(s_i2c.get())
+            #string = 'l'
             if string == 'o':
                 print("turning on display")
                 backlight.on()
