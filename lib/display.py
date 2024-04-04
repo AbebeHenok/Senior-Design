@@ -16,135 +16,134 @@ class LCD_DISPLAY:
     segBottom = 105
    
     def __init__(self):
-        LCD = LCD_3inch5()
-        LCD.bl_ctrl(100)
-        LCD.fill(LCD.WHITE)
-        LCD.show_up()
-        LCD.fill(LCD.WHITE)
-        LCD.show_down()
+        self.disp = LCD_3inch5()
+        self.disp.bl_ctrl(100)
+        self.disp.fill(self.disp.WHITE)
+        self.disp.show_up()
+        self.disp.fill(self.disp.WHITE)
+        self.disp.show_down()
         
-    def clearLCD():
-        LCD.fill(LCD.WHITE)
-        dot(dotx)
-        LCD.show_down()
+    def clearLCD(self):
+        self.disp.fill(self.disp.WHITE)
+        self.disp.show_down()
       
-    def hazard_fig(string):
-        LCD.fill(LCD.WHITE)
+    def hazard_fig(self, string):
+        self.disp.fill(self.disp.WHITE)
         if(string == 'b'):
-            LCD.fill_rect(145,3,175,175, LCD.BLUE)
+            self.disp.fill_rect(145,3,175,175, self.disp.BLUE)
         elif(string == 'l'):
-            LCD.fill_rect(145,3,175,175, LCD.GREEN)
+            self.disp.fill_rect(145,3,175,175, self.disp.GREEN)
         elif(string == 'r'):
-            LCD.fill_rect(145,3,175,175, LCD.RED)
-        LCD.fill_rect(160,18, 145, 145, LCD.WHITE)
-        LCD.fill_rect(225, 25, 15, 80, LCD.BLACK)
-        LCD.fill_rect(225, 110, 15, 15 , LCD.BLACK)
+            self.disp.fill_rect(145,3,175,175, self.disp.RED)
+        self.disp.fill_rect(160,18, 145, 145, self.disp.WHITE)
+        self.disp.fill_rect(225, 25, 15, 80, self.disp.BLACK)
+        self.disp.fill_rect(225, 110, 15, 15 , self.disp.BLACK)
 
-        LCD.show_up()
+        self.disp.show_up()
 
-    def LCD(isFirstDigit, digit):
+    def LCD(self, isFirstDigit, digit):
         x = 0
         if(isFirstDigit):
             x = 145
         else:
             x = 230
         if (int(digit) == 0):
-            LCD0(x)
+            disp0(x)
         elif (int(digit) == 1):
-            LCD1(x)
+            disp1(x)
         elif (int(digit) == 2):
-            LCD2(x)
+            disp2(x)
         elif (int(digit) == 3):
-            LCD3(x)
+            disp3(x)
         elif (int(digit) == 4):
-            LCD4(x)
+            disp4(x)
         elif (int(digit) == 5):
-            LCD5(x)
+            disp5(x)
         elif (int(digit) == 6):
-            LCD6(x)
+            disp6(x)
         elif (int(digit) == 7):
-            LCD7(x)
+            disp7(x)
         elif (int(digit) == 8):
-            LCD8(x)
+            disp8(x)
         elif (int(digit) == 9):
-            LCD9(x)
+            disp9(x)
             
-    def dot(x):
-        LCD.fill_rect(x, segBottom, segWidth, segWidth, LCD.BLACK)
+    def dot(self, x):
+        self.disp.fill_rect(x, self.segBottom, self.segWidth, self.segWidth, self.disp.BLACK)
         
     def LCD1(x):
-        LCD.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, LCD.WHITE)
-        LCD.fill_rect(x + rSeg, segTop, segWidth, segHeight * 2 + segWidth,LCD.BLACK) #draws 2 right segments
+        self.disp.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, self.disp.WHITE)
+        self.disp.fill_rect(x + rSeg, segTop, segWidth, segHeight * 2 + segWidth,self.disp.BLACK) #draws 2 right segments
 
     def LCD2(x):
-        LCD.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, LCD.WHITE)
-        LCD.fill_rect(x + rSeg, segTop, segWidth, segHeight + segWidth, LCD.BLACK) #draws top-right seg
-        LCD.fill_rect(x, segTop + segHeight, segWidth, segHeight, LCD.BLACK) #draws bot-left seg
-        LCD.fill_rect(x, segTop, segHeight, segWidth,  LCD.BLACK) #draws top-mid seg
-        LCD.fill_rect(x, segTop + segHeight, segHeight, segWidth,  LCD.BLACK) #draws mid seg
-        LCD.fill_rect(x, segTop + segHeight*2, segHeight + segWidth, segWidth ,  LCD.BLACK) #draws bot-mid seg
+        self.disp.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, self.disp.WHITE)
+        self.disp.fill_rect(x + rSeg, segTop, segWidth, segHeight + segWidth, self.disp.BLACK) #draws top-right seg
+        self.disp.fill_rect(x, segTop + segHeight, segWidth, segHeight, self.disp.BLACK) #draws bot-left seg
+        self.disp.fill_rect(x, segTop, segHeight, segWidth,  self.disp.BLACK) #draws top-mid seg
+        self.disp.fill_rect(x, segTop + segHeight, segHeight, segWidth,  self.disp.BLACK) #draws mid seg
+        self.disp.fill_rect(x, segTop + segHeight*2, segHeight + segWidth, segWidth ,  self.disp.BLACK) #draws bot-mid seg
 
     def LCD3(x):
-        LCD.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, LCD.WHITE)
-        LCD.fill_rect(x + rSeg, segTop, segWidth, segHeight *2 + segWidth,LCD.BLACK) #draws 2 right segments
-        #   LCD.fill_rect(x, segTop + segHeight, segWidth, segHeight, LCD.BLACK) #draws bot-left seg
-        LCD.fill_rect(x, segTop, segHeight, segWidth,  LCD.BLACK) #draws top-mid seg
-        LCD.fill_rect(x, segTop + segHeight, segHeight, segWidth,  LCD.BLACK) #draws mid seg
-        LCD.fill_rect(x, segTop + segHeight*2, segHeight, segWidth,  LCD.BLACK) #draws bot-mid seg
+        self.disp.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, self.disp.WHITE)
+        self.disp.fill_rect(x + rSeg, segTop, segWidth, segHeight *2 + segWidth,self.disp.BLACK) #draws 2 right segments
+        #   self.disp.fill_rect(x, segTop + segHeight, segWidth, segHeight, self.disp.BLACK) #draws bot-left seg
+        self.disp.fill_rect(x, segTop, segHeight, segWidth,  self.disp.BLACK) #draws top-mid seg
+        self.disp.fill_rect(x, segTop + segHeight, segHeight, segWidth,  self.disp.BLACK) #draws mid seg
+        self.disp.fill_rect(x, segTop + segHeight*2, segHeight, segWidth,  self.disp.BLACK) #draws bot-mid seg
       
     def LCD4(x):
-        LCD.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, LCD.WHITE)
-        LCD.fill_rect(x + rSeg, segTop, segWidth, segHeight * 2 + segWidth,LCD.BLACK) #draws 2 right segments
-        LCD.fill_rect(x, segTop, segWidth, segHeight, LCD.BLACK) #draws top-left seg
-        LCD.fill_rect(x, segTop + segHeight, segHeight, segWidth,  LCD.BLACK) #draws mid seg
+        self.disp.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, self.disp.WHITE)
+        self.disp.fill_rect(x + rSeg, segTop, segWidth, segHeight * 2 + segWidth,self.disp.BLACK) #draws 2 right segments
+        self.disp.fill_rect(x, segTop, segWidth, segHeight, self.disp.BLACK) #draws top-left seg
+        self.disp.fill_rect(x, segTop + segHeight, segHeight, segWidth,  self.disp.BLACK) #draws mid seg
 
     def LCD5(x):
-        LCD.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, LCD.WHITE)
-        LCD.fill_rect(x, segTop, segWidth, segHeight + segWidth, LCD.BLACK) #draws top-left seg
-        LCD.fill_rect(x+ rSeg, segTop + segHeight, segWidth, segHeight, LCD.BLACK) #draws bot-right seg
-        LCD.fill_rect(x, segTop, segHeight + segWidth, segWidth,  LCD.BLACK) #draws top-mid seg
-        LCD.fill_rect(x, segTop + segHeight, segHeight, segWidth,  LCD.BLACK) #draws mid seg
-        LCD.fill_rect(x, segTop + segHeight*2, segHeight + segWidth, segWidth,  LCD.BLACK) #draws bot-mid seg
+        self.disp.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, self.disp.WHITE)
+        self.disp.fill_rect(x, segTop, segWidth, segHeight + segWidth, self.disp.BLACK) #draws top-left seg
+        self.disp.fill_rect(x+ rSeg, segTop + segHeight, segWidth, segHeight, self.disp.BLACK) #draws bot-right seg
+        self.disp.fill_rect(x, segTop, segHeight + segWidth, segWidth,  self.disp.BLACK) #draws top-mid seg
+        self.disp.fill_rect(x, segTop + segHeight, segHeight, segWidth,  self.disp.BLACK) #draws mid seg
+        self.disp.fill_rect(x, segTop + segHeight*2, segHeight + segWidth, segWidth,  self.disp.BLACK) #draws bot-mid seg
 
     def LCD6(x):
         
-        LCD.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, LCD.WHITE)
-        LCD.fill_rect(x , segTop, segWidth, segHeight + segWidth, LCD.BLACK) #draws top-left seg
-        LCD.fill_rect(x +rSeg, segTop + segHeight, segWidth, segHeight, LCD.BLACK) #draws bot-right seg
-        LCD.fill_rect(x, segTop, segWidth, segHeight * 2 + segWidth,LCD.BLACK) #draws 2 left segments
-        LCD.fill_rect(x, segTop, segHeight + segWidth, segWidth,  LCD.BLACK) #draws top-mid seg
-        LCD.fill_rect(x, segTop + segHeight, segHeight, segWidth,  LCD.BLACK) #draws mid seg
-        LCD.fill_rect(x, segTop + segHeight*2, segHeight + segWidth , segWidth,  LCD.BLACK) #draws bot-mid seg
+        self.disp.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, self.disp.WHITE)
+        self.disp.fill_rect(x , segTop, segWidth, segHeight + segWidth, self.disp.BLACK) #draws top-left seg
+        self.disp.fill_rect(x +rSeg, segTop + segHeight, segWidth, segHeight, self.disp.BLACK) #draws bot-right seg
+        self.disp.fill_rect(x, segTop, segWidth, segHeight * 2 + segWidth,self.disp.BLACK) #draws 2 left segments
+        self.disp.fill_rect(x, segTop, segHeight + segWidth, segWidth,  self.disp.BLACK) #draws top-mid seg
+        self.disp.fill_rect(x, segTop + segHeight, segHeight, segWidth,  self.disp.BLACK) #draws mid seg
+        self.disp.fill_rect(x, segTop + segHeight*2, segHeight + segWidth , segWidth,  self.disp.BLACK) #draws bot-mid seg
       
     def LCD7(x):
-        LCD.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, LCD.WHITE)    
-        LCD.fill_rect(x + rSeg, segTop, segWidth, segHeight * 2 + segWidth,LCD.BLACK) #draws 2 right segments
-        LCD.fill_rect(x, segTop, segHeight + segWidth, segWidth,  LCD.BLACK) #draws top-mid seg
+        self.disp.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, self.disp.WHITE)    
+        self.disp.fill_rect(x + rSeg, segTop, segWidth, segHeight * 2 + segWidth,self.disp.BLACK) #draws 2 right segments
+        self.disp.fill_rect(x, segTop, segHeight + segWidth, segWidth,  self.disp.BLACK) #draws top-mid seg
 
     def LCD8(x):
-        LCD.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, LCD.WHITE)
-        LCD.fill_rect(x, segTop, segHeight + segWidth, segWidth,  LCD.BLACK) #draws top-mid seg
-        LCD.fill_rect(x, segTop + segHeight, segHeight, segWidth,  LCD.BLACK) #draws mid seg
-        LCD.fill_rect(x, segTop + segHeight*2, segHeight + segWidth , segWidth,  LCD.BLACK) #draws bot-mid seg
-        LCD.fill_rect(x + rSeg, segTop, segWidth, segHeight + segWidth, LCD.BLACK) #draws top-right seg
-        LCD.fill_rect(x, segTop + segHeight, segWidth, segHeight, LCD.BLACK) #draws bot-left seg
-        LCD.fill_rect(x, segTop, segWidth, segHeight + segWidth, LCD.BLACK) #draws top-left seg
-        LCD.fill_rect(x+ rSeg, segTop + segHeight, segWidth, segHeight, LCD.BLACK) #draws bot-right seg
+        self.disp.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, self.disp.WHITE)
+        self.disp.fill_rect(x, segTop, segHeight + segWidth, segWidth,  self.disp.BLACK) #draws top-mid seg
+        self.disp.fill_rect(x, segTop + segHeight, segHeight, segWidth,  self.disp.BLACK) #draws mid seg
+        self.disp.fill_rect(x, segTop + segHeight*2, segHeight + segWidth , segWidth,  self.disp.BLACK) #draws bot-mid seg
+        self.disp.fill_rect(x + rSeg, segTop, segWidth, segHeight + segWidth, self.disp.BLACK) #draws top-right seg
+        self.disp.fill_rect(x, segTop + segHeight, segWidth, segHeight, self.disp.BLACK) #draws bot-left seg
+        self.disp.fill_rect(x, segTop, segWidth, segHeight + segWidth, self.disp.BLACK) #draws top-left seg
+        self.disp.fill_rect(x+ rSeg, segTop + segHeight, segWidth, segHeight, self.disp.BLACK) #draws bot-right seg
 
     def LCD9(x):
-        LCD.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, LCD.WHITE)
-        LCD.fill_rect(x, segTop, segHeight + segWidth, segWidth,  LCD.BLACK) #draws top-mid seg
-        LCD.fill_rect(x, segTop + segHeight, segHeight, segWidth,  LCD.BLACK) #draws mid seg
-        LCD.fill_rect(x, segTop + segHeight*2, segHeight + segWidth , segWidth,  LCD.BLACK) #draws bot-mid seg
-        LCD.fill_rect(x + rSeg, segTop, segWidth, segHeight + segWidth, LCD.BLACK) #draws top-right seg
-        LCD.fill_rect(x, segTop, segWidth, segHeight + segWidth, LCD.BLACK) #draws top-left seg
-        LCD.fill_rect(x+ rSeg, segTop + segHeight, segWidth, segHeight, LCD.BLACK) #draws bot-right seg
+        self.disp.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, self.disp.WHITE)
+        self.disp.fill_rect(x, segTop, segHeight + segWidth, segWidth,  self.disp.BLACK) #draws top-mid seg
+        self.disp.fill_rect(x, segTop + segHeight, segHeight, segWidth,  self.disp.BLACK) #draws mid seg
+        self.disp.fill_rect(x, segTop + segHeight*2, segHeight + segWidth , segWidth,  self.disp.BLACK) #draws bot-mid seg
+        self.disp.fill_rect(x + rSeg, segTop, segWidth, segHeight + segWidth, self.disp.BLACK) #draws top-right seg
+        self.disp.fill_rect(x, segTop, segWidth, segHeight + segWidth, self.disp.BLACK) #draws top-left seg
+        self.disp.fill_rect(x+ rSeg, segTop + segHeight, segWidth, segHeight, self.disp.BLACK) #draws bot-right seg
         
     def LCD0(x):
-         LCD.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, LCD.WHITE)
-         LCD.fill_rect(x, segTop, segHeight + segWidth, segWidth,  LCD.BLACK) #draws top-mid seg
-         LCD.fill_rect(x, segTop + segHeight*2, segHeight + segWidth , segWidth,  LCD.BLACK) #draws bot-mid seg
-         LCD.fill_rect(x + rSeg, segTop, segWidth, segHeight + segWidth, LCD.BLACK) #draws top-right seg
-         LCD.fill_rect(x, segTop + segHeight, segWidth, segHeight, LCD.BLACK) #draws bot-left seg
-         LCD.fill_rect(x, segTop, segWidth, segHeight + segWidth, LCD.BLACK) #draws top-left seg
-         LCD.fill_rect(x+ rSeg, segTop + segHeight, segWidth, segHeight, LCD.BLACK) #draws bot-right seg
+         self.disp.fill_rect(x, segTop, segWidth * 2 + segHeight, segHeight * 2  + segWidth, self.disp.WHITE)
+         self.disp.fill_rect(x, segTop, segHeight + segWidth, segWidth,  self.disp.BLACK) #draws top-mid seg
+         self.disp.fill_rect(x, segTop + segHeight*2, segHeight + segWidth , segWidth,  self.disp.BLACK) #draws bot-mid seg
+         self.disp.fill_rect(x + rSeg, segTop, segWidth, segHeight + segWidth, self.disp.BLACK) #draws top-right seg
+         self.disp.fill_rect(x, segTop + segHeight, segWidth, segHeight, self.disp.BLACK) #draws bot-left seg
+         self.disp.fill_rect(x, segTop, segWidth, segHeight + segWidth, self.disp.BLACK) #draws top-left seg
+         self.disp.fill_rect(x+ rSeg, segTop + segHeight, segWidth, segHeight, self.disp.BLACK) #draws bot-right seg
