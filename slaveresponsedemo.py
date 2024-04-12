@@ -154,7 +154,7 @@ class LCD_DISPLAY:
 
     def LCD(self, digit, isFirstDigit):
         self.x = 0
-        time.sleep(1)
+#         time.sleep(1)
         if(isFirstDigit):
             self.x = self.dig1
         else:
@@ -200,7 +200,7 @@ slavesda = Pin(0,  Pin.PULL_UP)
 s_i2c = i2c_slave(0,sda=0,scl=1,slaveAddress=0x41)
 display = LCD_DISPLAY()
 def main():
-
+    isFirstDigit = True
     t1 = time.time()
     counter = 0
     first = True;
@@ -208,7 +208,10 @@ def main():
     try:
         while True:
             string = chr(s_i2c.get()) #either update numbers or f, which means clear list and repopulate it again before writing to display once more.
-            if(string == '0' or string == '1' or string == '2' or string == '3' or string == '4' or string == '5' or string == '6' or string == '7' or string == '8' or string == '9' or string == '0'):
+            print(string)
+            if(len(value) < 4):
+                populatelist(string)
+            elif(string == '0' or string == '1' or string == '2' or string == '3' or string == '4' or string == '5' or string == '6' or string == '7' or string == '8' or string == '9' or string == '0'):
                 display.LCD(string, isFirstDigit)
                 print("Upadating display ", string)
                 isFirstDigit = not isFirstDigit
@@ -216,48 +219,51 @@ def main():
                 value.clear()
                 print("Turning off display")
                 display.disp.bl_ctrl(0)
+#                 display.clearLCD()
                 print("Clearing value, ", value)
-                populatelist()
+#                 populatelist()
                 isFirstDigit = True
     except KeyboardInterrupt:
         gc.collect()
         print("Done")
         pass
 
-def populatelist():
+def populatelist(string):
     global value, display
 #     print(value)
-    while(len(value) < 4): #before list has receieved o, hazard type, dig1, dig2 AT LEAST ONCE
-        string = chr(s_i2c.get())
-        print(value)
-        vallen = len(value)
-        if(vallen == 0):
-            if(string == 'o'):
-                value.append(string)
-                print(value)
-        elif(vallen == 1):   
-            if (string == 'l' or string == 'r' or string == 'b'):
-                value.append(string)
-                print(value)              
-        elif(vallen == 2 or vallen == 3):   
-            if(string == '0' or string == '1' or string == '2' or string == '3' or string == '4' or string == '5' or string == '6' or string == '7' or string == '8' or string == '9' or string == '0'):
-                value.append(string)
-                print(value)
-            
-    print("list populated", value)
-    display.disp.bl_ctrl(100)
-#     display.disp.fill(display.disp.WHITE)
-#     time.sleep(1)
-#         writewarning(val[0])
-    display.hazard_fig(value[1])
-    print("populate hazard_fig")
-#     time.sleep(1)
-    display.LCD(value[2], True)
-    display.LCD(value[3], False)
-#         lcd(val[2], True)
-#         lcd(val[3], False)
+#     while(len(value) < 4): #before list has receieved o, hazard type, dig1, dig2 AT LEAST ONCE
+#         string = chr(s_i2c.get())
+    print(value)
+    vallen = len(value)
+    if(vallen == 0):
+        if(string == 'o'):
+            value.append(string)
+            print(value)
+    elif(vallen == 1):   
+        if (string == 'l' or string == 'r' or string == 'b'):
+            value.append(string)
+            print(value)              
+    elif(vallen == 2 or vallen == 3):   
+        if(string == '0' or string == '1' or string == '2' or string == '3' or string == '4' or string == '5' or string == '6' or string == '7' or string == '8' or string == '9' or string == '0'):
+            value.append(string)
+            print(value)
+    if len(value) == 4:        
+        print("list populated", value)
+        display.disp.bl_ctrl(100)
+        display.hazard_fig(value[1])
+        print("populate hazard_fig")
+    #     time.sleep(1)
+        display.LCD(value[2], True)
+        display.LCD(value[3], False)
+    #         lcd(val[2], True)
+    #         lcd(val[3], False)
 
 
 if __name__ == "__main__":
-    main()
-    
+    try:
+        main()
+    except KeyboardInterrupt:
+        gc.collect()
+        print("DONE")
+        
+        
