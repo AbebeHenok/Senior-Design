@@ -26,7 +26,7 @@ def populatelist(self):
             if (string == 'l' or string == 'r' or string == 'b')
                 value.append(string)
         elif(vallen == 2 or vallen == 3):   
-            if (string == 'l' or string == 'r' or string == 'b') and vallen == 1) or ( (string == '0' or string == '1' or string == '2' or string == '3' or string == '4' or string == '5' or string == '6' or string == '7' or string == '8' or string == '9' or string == '0')
+            if(string == '0' or string == '1' or string == '2' or string == '3' or string == '4' or string == '5' or string == '6' or string == '7' or string == '8' or string == '9' or string == '0'):
                 value.append(string)
 
     backlighton()
