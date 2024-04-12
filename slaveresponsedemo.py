@@ -9,7 +9,7 @@ while True:
         isFirstDigit.toggle()
     elif(string == 'f'):
         backlightoff()
-        list.empty()
+        value.empty()
         populatelist()
         isFirstDigit = True
     
