@@ -30,7 +30,7 @@ def populatelist(self):
                 value.append(string)
 
     backlighton()
-    writewarning()
+    writewarning(val[0])
     lcd(val[2], True)
     lcd(val[3], False)
     
