@@ -1,4 +1,5 @@
 
+
 ############################## INTELLIGENT HIGHWAY HAZARD WARNING SYSTEM ############################## 
 #
 # Authors - Henok Abebe, David Ngo, Jhaysonel  Gueverra, Nhu Pham, Mohmmed Rahman, Anthony C Cruz
@@ -264,18 +265,20 @@ def lora_thread():
 #        uart_lora.readline()
     while True:# keep recieving
         time.sleep(1) #temporary TODO
-#         print("receiving")  
+        print("receiving")
+        
         #line += str(uart_lora.readline()) #checking for messages from Lora module
         #print(line)
         receivedString = uart_lora.read()
         if(not onHighway): #check if back to non-highway; kill thread.
             print("exiting receiver thread")
-            _thread.exit()
+            _thread.exit() 
         elif((hazard_flag == 1)):#hazard detected, transmit hazard
             with lock:
                  transmit_hazard(Hazard(currDirection, currLat,currLon, 1, hazType)) #transmit current hazard (will override it if identified
 
         elif receivedString != None: #uart message is finished
+            print("Got something")
             #analyze receivedString message - parse it, identify it with stored data (if existing), and update hazard flag.
             parse_message(receivedString)
             receivedString = None
@@ -356,7 +359,9 @@ def fromAhead(hazard_location):
     print("Hazard location lon: ", hazard_location.lon)
     with lock:
         print("From head locked")
-        if(hazard_location.direction == currDirection):           
+        print("hazard loc.dir: ", hazard_location.direction)
+        if(hazard_location.direction == currDirection):
+            
             # check if the transmitter's location is behind or in front -- use GPS latitude and/or longtitude
             # DIRECTION KEY: 0 = South, 1 = North, 2 = West, 3=East
             # SOUTH DIRECTION
@@ -467,20 +472,20 @@ def turnoff_display(t):
     global display_timer, masteri2c
     #turn off display
     #LCD OFF
-    masteri2c.write(0x41, 'f')
+    masteri2c.writeto(0x41, 'f')
     display_timer.deinit()
     
 def turnon_display(display_hazard):
     global display_timer, masteri2c      
     #GPIO ON
-    masteri2c.write(0x41, 'o') #turn on display
+    masteri2c.writeto(0x41, 'o') #turn on display
     if(display_hazard.haz_type == 'l'):
-        masteri2c.write(0x41, 'l')
+        masteri2c.writeto(0x41, 'l')
     elif(display_hazard.haz_type == 'r'):
-        masteri2c.write(0x41, 'r')
+        masteri2c.writeto(0x41, 'r')
     elif(display_hazard.haz_type == 'b'):
-        masteri2c.write(0x41, 'b')
-    update_display()
+        masteri2c.writeto(0x41, 'b')
+#     update_display()
     display_timer = Timer(period=1000, mode=Timer.PERIODIC, callback=update_display)
 
 def update_display(t):
@@ -493,8 +498,8 @@ def update_display(t):
         #TODO set 0.0 at the top
         display_timer = Timer(period=5000, mode=Timer.ONE_SHOT, callback=turnoff_display)
         display_hazard = None
-        masteri2c.write('0x41', '0')
-        masteri2c.write('0x41', '0')
+        masteri2c.writeto(0x41, '0')
+        masteri2c.writeto(0x41, '0')
         return
     else:# hazard ahead and display on
         #int(lat)\
@@ -508,8 +513,8 @@ def update_display(t):
             firstDigit = dist[dotIndex -1:dotIndex]
             secondDigit = dist[dotIndex + 1:dotIndex + 2]
             
-            masteri2c.write(0x41, str(firstDigit))
-            masteri2c.write(0x41, str(secondDigit))
+            masteri2c.writeto(0x41, str(firstDigit))
+            masteri2c.writeto(0x41, str(secondDigit))
             #show on display                     
         return
     
@@ -537,13 +542,11 @@ def update_display(hazard_location):
             firstDigit = dist[dotIndex -1:dotIndex]
             secondDigit = dist[dotIndex + 1:dotIndex + 2]
             
-            masteri2c.write(0x41, str(firstDigit))
-            masteri2c.write(0x41, str(secondDigit))
+            masteri2c.writeto(0x41, str(firstDigit))
+            masteri2c.writeto(0x41, str(secondDigit))
             #show on display                     
         return
         #LCD 0.0
         #print LCD 0.0 for 5s and then delete
 #turnon_display(Hazard(currDirection, currLat,currLon, 1))
 asyncio.run(sensor_thread()) 
-
-6
