@@ -535,7 +535,7 @@ def update_display(hazard_location):
         #update based on number distance
         with lock:        
             meanEarthRadius = DecimalNumber(str(3957.756))#miles
-            dist = (math.acos(math.cos(math.radians(90 - currLat)) * math.cos(math.radians(90- hazard_location.lat)) + math.sin(math.radians(90 - currLat)) * math.sin(math.radians(90 - hazard_location.lat)) * math.cos(math.radians(currLon - hazard_location.lon))) * meanEarthRadius)  
+            dist = (((90 - currLat)*DecimalNumber.pi()/180).cos() * ((90 - hazard_location.lat)*DecimalNumber.pi()/180).cos() + ((90-currLat)*DecimalNumber.pi()/180).sin() * ((90-hazard_location.lat)*DecimalNumber.pi()/180).sin() * ((currLon - hazard_location.lon)*DecimalNumber.pi()/180).cos()).acos() * meanEarthRadius
             print(dist, " miles")
             dist = str(dist)
             dotIndex = dist.index(".")
