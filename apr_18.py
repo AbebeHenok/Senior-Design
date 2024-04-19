@@ -65,6 +65,7 @@ print(masteri2c.scan())
 #stores the current longitude/latitude and previous longitude/latitude measurements
 prevLon, prevLat, currLon, currLat = (0,)*4      
 
+thread_count = 0
 # 
 # #Global Variables for received string. Initialized to an empty string.
 receivedString = None
@@ -124,7 +125,7 @@ lock  = _thread.allocate_lock()
 async def sensor_thread():
     print('waiting for GPS data')
     await gps.data_received(position=True, altitude=True)  
-    global prevLon, prevLat,currLon, currLat, warning, currDirection, onHighway
+    global prevLon, prevLat,currLon, currLat, warning, currDirection, onHighway, thread_count
     direction, prevLat, prevLon, currLat, currLon = (0,)*5        
     #onHighway indicates if vehicle is on highway.
     onHighway = False 
@@ -150,7 +151,7 @@ async def sensor_thread():
             prevLon = currLon
             continue
 
-        if speed > 15:
+        if speed > 8:
             print("on Highway!")
             onHighway = True # if speed > 55, store direction EW or NS
                #GETTING DIRECTION - COORDINATE METHOD
@@ -178,7 +179,11 @@ async def sensor_thread():
 #         onHighway = True
         if(onHighway):#start receiver thread and initialize sensor lists
             print("On Highway")
-            _thread.start_new_thread(lora_thread,())
+            if(thread_count > 0):
+                pass
+            else:
+                time.sleep(0.1)
+                _thread.start_new_thread(lora_thread,())
             print("init sensor loop")
             DEQUE_SIZE = 5.0
             # Initializing deque (with an intended size of 5) for accelerometer x, y, and z values.
@@ -193,7 +198,13 @@ async def sensor_thread():
                 time.sleep(.5) #TEMPORARY TODO
                 accel = accAndGyro.acceleration
                 gyro = accAndGyro.gyro
-
+                prevLat = currLat
+                prevLon = currLon
+                gpsSpeed = gps.speed_string(11)
+                print("GPS SPEED: ",gpsSpeed)
+                speed = DecimalNumber(gpsSpeed[0: (len(gpsSpeed) - 4)])
+                currLat = DecimalNumber(str(gps.latitude(1)[0]))
+                currLon = DecimalNumber(str(gps.longitude(1)[0]))
                 #append x,y,z axis values  to respective deques.
                 xAcc.append(accel[0]);yAcc.append(accel[1])
                 xGyro.append(gyro[0]);yGyro.append(gyro[1]);zGyro.append(gyro[2]);
@@ -242,10 +253,10 @@ async def sensor_thread():
                                 onHighway = False
                                 direction = currDirection
                                 print("exiting highway.")
-                time.sleep(1) #TEMPORARY TODO
+                await asyncio.sleep(0.5)
         await asyncio.sleep(.5)            
 def lora_thread():
-    global hazard_flag, flagBit, transmitted_flag, receivedString, direction, currDirection, onHighway, haz_type
+    global hazard_flag, flagBit, transmitted_flag, receivedString, direction, currDirection, onHighway, haz_type, thread_count
     
     sensorReading = "1,0,30.0031,20.1241,W" # global string
     uart_lora.write(bytes("AT+MODE=TEST", "utf-8"))  #ATTEMPTING AT+MODE=TEST AUTO
@@ -267,7 +278,8 @@ def lora_thread():
         receivedString = uart_lora.read()
         if(not onHighway): #check if back to non-highway; kill thread.
             print("exiting receiver thread")
-            _thread.exit() 
+            thread_count = 0
+            _thread.exit()
         elif((hazard_flag == 1)):#hazard detected, transmit hazard
             with lock:
                  transmit_hazard(Hazard(currDirection, currLat,currLon, 1, hazType)) #transmit current hazard (will override it if identified
