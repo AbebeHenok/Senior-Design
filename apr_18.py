@@ -179,11 +179,12 @@ async def sensor_thread():
 #         onHighway = True
         if(onHighway):#start receiver thread and initialize sensor lists
             print("On Highway")
-            if(thread_count > 0):
-                pass
-            else:
-                time.sleep(0.1)
-                _thread.start_new_thread(lora_thread,())
+            with lock:
+                if(thread_count == 0):
+                    time.sleep(0.1)
+                    _thread.start_new_thread(lora_thread,())
+                else:
+                    pass
             print("init sensor loop")
             DEQUE_SIZE = 5.0
             # Initializing deque (with an intended size of 5) for accelerometer x, y, and z values.
@@ -277,9 +278,12 @@ def lora_thread():
         #print(line)
         receivedString = uart_lora.read()
         if(not onHighway): #check if back to non-highway; kill thread.
+            lock.acquire()
             print("exiting receiver thread")
+            time.sleep(0.1)
             thread_count = 0
             _thread.exit()
+            lock.release()
         elif((hazard_flag == 1)):#hazard detected, transmit hazard
             with lock:
                  transmit_hazard(Hazard(currDirection, currLat,currLon, 1, hazType)) #transmit current hazard (will override it if identified
