@@ -77,7 +77,7 @@ receivedString = None
 onHighway = False
 # 
 # # Checked to warn the driver - turn on LED and speakers
-hazard_flag = False
+hazard_flag = 0
 #
 #type of hazard received/transmitted global
 haz_type = None
@@ -107,7 +107,7 @@ display_hazard = None
 #display linger timer
 display_timer = None
     
-
+receiver = True
 
 # Hazard Class used describe a hazardous instance 
 class Hazard:
@@ -120,14 +120,15 @@ class Hazard:
 # lock will allow us to make sure both functions don't try to update the flagBit at the same time.
 lock  = _thread.allocate_lock()
 thread_lock = _thread.allocate_lock()
+variable_lock = _thread.allocate_lock()
 ################################################################################
 
 ###################### Program begins here ######################################## 
 async def sensor_thread():
     print('waiting for GPS data')
-    await gps.data_received(position=True, altitude=True)  
-    global prevLon, prevLat,currLon, currLat, warning, currDirection, onHighway, thread_count
-    direction, prevLat, prevLon, currLat, currLon = (0,)*5        
+#     await gps.data_received(position=True, altitude=True)  
+    global prevLon, prevLat,currLon, currLat, warning, currDirection, onHighway, thread_count, hazard_flag, receiver
+    direction, prevLat, prevLon, currLat, currLon = (1,)*5        
     #onHighway indicates if vehicle is on highway.
     onHighway = False 
     #direction stores the original direction of the vehicle once it enters the highway.
@@ -177,7 +178,8 @@ async def sensor_thread():
             print("highway direction: ", direction)
        #direction = 0 #0 = east, 1 = west, etc
         print("checking onHighway")
-#         onHighway = True
+        onHighway = True
+        direction = 2
         if(onHighway):#start receiver thread and initialize sensor lists
             print("On Highway")
             thread_lock.acquire()    
@@ -204,7 +206,7 @@ async def sensor_thread():
                 prevLat = currLat
                 prevLon = currLon
                 gpsSpeed = gps.speed_string(11)
-                print("GPS SPEED: ",gpsSpeed)
+                print("GPS SPEED in Highway: ",gpsSpeed)
                 speed = DecimalNumber(gpsSpeed[0: (len(gpsSpeed) - 4)])
                 currLat = DecimalNumber(str(gps.latitude(1)[0]))
                 currLon = DecimalNumber(str(gps.longitude(1)[0]))
@@ -221,7 +223,7 @@ async def sensor_thread():
                     #set current direction
                     lonDiff = currLon - prevLon
                     latDiff = currLat - prevLat
-                    with lock:
+                    with variable_lock:
                         if abs(lonDiff) >= abs(latDiff): # Going East/West
                             if lonDiff >= 0:#going East
                                 currDirection = 3
@@ -237,15 +239,23 @@ async def sensor_thread():
                                 currDirection = 0
                                 print("going South")
                         #active state
-                        if xAcc.runAvg() < -3:
+                        print("x acc run avg: ", xAcc.runAvg())
+                        if xAcc.runAvg() < -.5:
                             #transmit
                             print("XACC DETECTED")
                             hazard_flag = 1
-                            transmit_flag = True
+                            # Initializing deque (with an intended size of 5) for accelerometer x, y, and z values.
+                            xAcc = deque(())
+                            for i in range(5):
+                                xAcc.append(0)
+                            print("length of xAcc: ", len(xAcc))
                         if abs(zGyro.runAvg()) > abs(0.4):
                             print("ZGYRO DETECTED")
                             hazard_flag = 1
-                            transmit_flag = True
+                            zGyro = deque(())
+                            for i in range(5):
+                                zGyro.append(0)
+                            print("zGyro len: ", len(zGyro))
                         if (direction == 0 or direction == 1):#stored at start of active mode: north or south
                             if currDirection  > 1 and speed > 10: # going east or west. speed check to ignore jitter at low speed.
                                 onHighway = False
@@ -259,36 +269,37 @@ async def sensor_thread():
                 await asyncio.sleep(0.5)
         await asyncio.sleep(.5)            
 def lora_thread():
-    global hazard_flag, flagBit, transmitted_flag, receivedString, direction, currDirection, onHighway, haz_type, thread_count
+    global hazard_flag , transmitted_flag, receivedString, direction, currDirection, onHighway, haz_type, thread_count, receiver
     
     sensorReading = "1,0,30.0031,20.1241,W" # global string
-    uart_lora.write(bytes("AT+MODE=TEST", "utf-8"))  #ATTEMPTING AT+MODE=TEST AUTO
     receivedString = None #RESET RECEIVED STRING
+    uart_lora.write(bytes("AT+MODE=TEST", "utf-8"))  #ATTEMPTING AT+MODE=TEST AUTO
     print("Checking+MODE=TEST")
     time.sleep(1)
     print(uart_lora.read())
     uart_lora.write(bytes("AT+TEST=RXLRPKT", "utf-8")) #set in receiver mode
     time.sleep(1)
-    print(uart_lora.read())   
+    print(uart_lora.read())
+    
 #    while uart_lora.readline()  != None:
 #        uart_lora.readline()
     while True:# keep recieving
-        time.sleep(1) #temporary TODO
+        time.sleep(0.5) #temporary TODO
         print("receiving")
         
         #line += str(uart_lora.readline()) #checking for messages from Lora module
         #print(line)
         receivedString = uart_lora.read()
         if(not onHighway): #check if back to non-highway; kill thread.
-            thread_lock.acquire()
-            print("exiting receiver thread")
-            time.sleep(0.1)
-            thread_count = 0
-            _thread.exit()
-            thread_lock.release()
+            with thread_lock:
+                print("exiting receiver thread")
+                time.sleep(0.1)
+                thread_count = 0
+                _thread.exit()
         elif((hazard_flag == 1)):#hazard detected, transmit hazard
-            with lock:
-                 transmit_hazard(Hazard(currDirection, currLat,currLon, 1, hazType)) #transmit current hazard (will override it if identified
+            with variable_lock:
+                 print("about to transmit hazard")
+                 transmit_hazard(Hazard(currDirection, currLat,currLon, 1, "b")) #transmit current hazard (will override it if identified
 
         elif receivedString != None: #uart message is finished
             print("Got something")
@@ -300,31 +311,36 @@ def lora_thread():
 
 # Transmit code for LoRa -- Called in LoRa thread when hazard flag or flagbit is high.
 def transmit_hazard(hazard_location):
-    lock.acquire()
+    global hazard_flag  
+    print("transmitting hazard:")
     #CHECK HAZARD ARRAY FOR HAZRARD IN SAME AREA AND DIRECTION, IF SO, SEND THAT DATA WITH +1 COUNTER. oTHERWISE NEW, 0 COUNTER
     #ALSO, MAKE SURE TO RESET PREV LAT AND LON IF PAUSING SENSOR THREAD FOR STUFF
     hazard_to_transmit = identify_hazard(hazard_location, True)
-    transmit_String = (str(hazard_to_transmit.direction) + "," + str(hazard_to_transmit.lat) +  "," + str(hazard_to_transmit.lon) +  ","+ str(hazard_to_transmit.flag)+  ","+ str(hazard_to_transmit.haz_type)) #NEW HAZARD, COUNTER AT 0
+    print("fixed hazard_to_transmit. configuring LoRa to Test Mode and transmit")
+    uart_lora.write(bytes("AT+MODE=TEST","utf-8"))
+    time.sleep(1)
+    uart_lora.read()
+    
+    transmit_String = (str(hazard_to_transmit.direction) + "," + str(hazard_to_transmit.lat) +  "," + str(hazard_to_transmit.lon) +  ","+ str(hazard_to_transmit.flag_counter)+  ","+ str(hazard_to_transmit.haz_type)) #NEW HAZARD, COUNTER AT 0
     packet = "AT+TEST=TXLRSTR "+bytes(binascii.hexlify(transmit_String.encode('utf-8'))).decode()
     packet = bytes(packet,'utf-8') 
-    print(packet.decode())
+    print("sending ", packet.decode())
     uart_lora.write(packet)
 
     # Clearing transmission response
-    while uart_lora.readline() != None:
-        uart_lora.readline()
-        
-    # After transmission of hazard, reset the hazard and flagBit. 
-    flagBit, hazard_flag = 0
+    time.sleep(0.5)
+    print(uart_lora.read())
+    print("exiting transmission:")
+    # After transmission of hazard, reset the hazard and flagBit.
+    hazard_flag = 0
     
     uart_lora.write(bytes("AT+MODE=TEST","utf-8"))
     time.sleep(2)
     uart_lora.read()
     print("going back to receive mode")
-    uart_lora.write(bytes("AT+MODE=RXLRPKT" , "utf-8"))
+#     uart_lora.write(bytes("AT+MODE=RXLRPKT" , "utf-8"))
     time.sleep(2)
     uart_lora.read()
-    lock.release()
 ###################################################### End of Transmitter ##############################################################################################
 
 ###################################################### Hazard received method ##############################################################################################
@@ -375,7 +391,7 @@ def fromAhead(hazard_location):
 #     print("Current Direction: ", currDirection)
 #     print("Hazad location lat: ", hazard_location.lat)
 #     print("Hazard location lon: ", hazard_location.lon)
-    with lock:
+    with variable_lock:
         print("From head locked")
         print("hazard loc.dir: ", hazard_location.direction)
         if(hazard_location.direction == currDirection):
@@ -419,8 +435,9 @@ def fromAhead(hazard_location):
     
 def identify_hazard(hazard_location, transmitting):
     global HazardArray, display_hazard
+    print("identifying hazard")
     threshold = DecimalNumber("0.004")
-    if(len(HazardArray) == 0):
+    if(len(HazardArray) == 0 and not transmitting):
         HazardArray.append(hazard_location)
         if(hazard_location.flag_counter > 2 and not transmitting):
             display_hazard = hazard_location
@@ -526,7 +543,7 @@ def update_display(t):
     else:# hazard ahead and display on
         #int(lat)\
         #update based on number distance
-        with lock:        
+        with variable_lock:       
 #             dist = (math.acos(math.cos(math.radians(90 - currLat)) * math.cos(math.radians(90- hazard_location.lat)) + math.sin(math.radians(90 - currLat)) * math.sin(math.radians(90 - hazard_location.lat)) * math.cos(math.radians(currLon - hazard_location.lon))) * meanEarthRadius)
 #             dist = (acos(cos(radians(90 - currLat)) * cos(radians(90 - hazard_location.lat)) + sin(radians(90 - currLat)) * sin(radians(90 - hazard_location.lat)) * cos(radians(currLon - hazard_location.lon))) * meanEarthRadius)
             dist = distanceCalc(currLat, currLon, display_hazard.lat, display_hazard.lon)
@@ -563,4 +580,5 @@ def distanceCalc(lata, lona, latb, lonb):
 
 if __name__ == "__main__":
     asyncio.run(sensor_thread()) 
+
 
