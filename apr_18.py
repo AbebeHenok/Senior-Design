@@ -36,75 +36,75 @@ from display import *
 
 
 #################### Initailizing sensor communication protocols. ########################
-if __name__ == "__main__":
+
 #GPS module
-    uart_GPS = UART(1, baudrate=9600, bits=8, stop=1, parity = None, tx=Pin(4), rx=Pin(5), timeout=300)
-    sreader = asyncio.StreamReader(uart_GPS)  # Create a StreamReader
-    gps = as_GPS.AS_GPS(sreader)  # Instantiate GPS
+uart_GPS = UART(1, baudrate=9600, bits=8, stop=1, parity = None, tx=Pin(4), rx=Pin(5), timeout=300)
+sreader = asyncio.StreamReader(uart_GPS)  # Create a StreamReader
+gps = as_GPS.AS_GPS(sreader)  # Instantiate GPS
 
-    # Accelerometer/Gyroscope Module
-    i2c = busio.I2C(scl=board.GP27, sda=board.GP26)
-    accAndGyro = ISM(i2c)
+# Accelerometer/Gyroscope Module
+i2c = busio.I2C(scl=board.GP27, sda=board.GP26)
+accAndGyro = ISM(i2c)
 
-    # LoRa module
-    #uart =busio.UART(0,baudrate = 9600,stop = 1 ,tx = board.GP0, rx = board.GP1)
-    uart_lora = UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
+# LoRa module
+#uart =busio.UART(0,baudrate = 9600,stop = 1 ,tx = board.GP0, rx = board.GP1)
+uart_lora = UART(0,baudrate = 9600,stop = 1 ,tx = Pin(0),rx = Pin(1))
 
-    # Speaker
-    speaker = machine.PWM(machine.Pin(14))
-    speaker.duty_u16(0)
+# Speaker
+speaker = machine.PWM(machine.Pin(14))
+speaker.duty_u16(0)
+builtinLed = Pin("LED", Pin.OUT)
+#Pico W/ Display
 
-    #Pico W/ Display
+masterscl = Pin(21,  Pin.PULL_UP)
+mastersda = Pin(20, Pin.PULL_UP)
+masteri2c = I2C(0, freq=100000, scl=Pin(21), sda=Pin(20), timeout=100000)
+time.sleep(.1)        
+print(masteri2c.scan())
+        
+#stores the current longitude/latitude and previous longitude/latitude measurements
+prevLon, prevLat, currLon, currLat = (0,)*4      
 
-    masterscl = Pin(21,  Pin.PULL_UP)
-    mastersda = Pin(20, Pin.PULL_UP)
-    masteri2c = I2C(0, freq=100000, scl=Pin(21), sda=Pin(20), timeout=100000)
-    time.sleep(.1)        
-    print(masteri2c.scan())
-            
-    #stores the current longitude/latitude and previous longitude/latitude measurements
-    prevLon, prevLat, currLon, currLat = (0,)*4      
+# 
+# #Global Variables for received string. Initialized to an empty string.
+receivedString = None
+# 
+# #Global Variable for transmission string. Initialized to an empty string.
+# sensorReading = ""
+# 
+# #Boolean value for when on/off highway
+onHighway = False
+# 
+# # Checked to warn the driver - turn on LED and speakers
+hazard_flag = False
+#
+#type of hazard received/transmitted global
+haz_type = None
+# 
+# # Global Direction variable
+currDirection = 0
+# 
+HazardArray = []
 
-    # 
-    # #Global Variables for received string. Initialized to an empty string.
-    receivedString = None
-    # 
-    # #Global Variable for transmission string. Initialized to an empty string.
-    # sensorReading = ""
-    # 
-    # #Boolean value for when on/off highway
-    onHighway = False
-    # 
-    # # Checked to warn the driver - turn on LED and speakers
-    hazard_flag = False
-    #
-    #type of hazard received/transmitted global
-    haz_type = None
-    # 
-    # # Global Direction variable
-    currDirection = 0
-    # 
-    HazardArray = []
+#index in alarm sequence, timer for alarm
+alarm_seq = 0
+tim = None
+# masteri2c.writeto(0x41, 's')
 
-    #index in alarm sequence, timer for alarm
-    alarm_seq = 0
-    tim = None
-
-
-    note_freq = {
-      "A4": 440,
-      "C5": 523,
-      "D5": 587,
-      "E5": 659,
-      "R": 100
-    }
-    tune = ["A4", "C5", "A4", "R"]
-    #display state - true = on, false = off
-    #display_on = False
-    #hazard on display
-    display_hazard = None
-    #display linger timer
-    display_timer = None
+note_freq = {
+    "A4": 440,
+    "C5": 523,
+    "D5": 587,
+    "E5": 659,
+    "R": 100
+}
+tune = ["A4", "C5", "A4", "R"]
+#display state - true = on, false = off
+#display_on = False
+#hazard on display
+display_hazard = None
+#display linger timer
+display_timer = None
     
 
 
@@ -121,12 +121,11 @@ lock  = _thread.allocate_lock()
 ################################################################################
 
 ###################### Program begins here ######################################## 
-						  
 async def sensor_thread():
     print('waiting for GPS data')
-    #await gps.data_received(position=True, altitude=True)  
+    await gps.data_received(position=True, altitude=True)  
     global prevLon, prevLat,currLon, currLat, warning, currDirection, onHighway
-    direction, prevLat, prevLon, currLat, currLon = (1,)*5        
+    direction, prevLat, prevLon, currLat, currLon = (0,)*5        
     #onHighway indicates if vehicle is on highway.
     onHighway = False 
     #direction stores the original direction of the vehicle once it enters the highway.
@@ -135,23 +134,23 @@ async def sensor_thread():
         prevLat = currLat
         prevLon = currLon
         gpsSpeed = gps.speed_string(11)
+        print("GPS SPEED: ",gpsSpeed)
         speed = DecimalNumber(gpsSpeed[0: (len(gpsSpeed) - 4)])
         currLat = DecimalNumber(str(gps.latitude(1)[0]))
         currLon = DecimalNumber(str(gps.longitude(1)[0]))
-        
-        			
-#         print("Prev Lat ", prevLat)
-#         print("Prev lon ", prevLon)
-#         print("Curr Lat ", currLat)
-#         print("Curr Lon ", currLon)   
-#         print("speed: ", speed)
+    
+        print("Prev Lat ", prevLat)
+        print("Prev lon ", prevLon)
+        print("Curr Lat ", currLat)
+        print("Curr Lon ", currLon)   
+        print("speed: ", speed)
         #calibrating initial location
         if(prevLat == 0):
             prevLat = currLat
             prevLon = currLon
             continue
 
-        if speed > 55:
+        if speed > 15:
             print("on Highway!")
             onHighway = True # if speed > 55, store direction EW or NS
                #GETTING DIRECTION - COORDINATE METHOD
@@ -173,25 +172,25 @@ async def sensor_thread():
                 else: #going South
                     direction = 0
 #                     print("going South")
-        
+            print("highway direction: ", direction)
        #direction = 0 #0 = east, 1 = west, etc
         print("checking onHighway")
-        onHighway = True
+#         onHighway = True
         if(onHighway):#start receiver thread and initialize sensor lists
             print("On Highway")
             _thread.start_new_thread(lora_thread,())
             print("init sensor loop")
-            DEQUE_SIZE = 5.0						 																																																																
+            DEQUE_SIZE = 5.0
             # Initializing deque (with an intended size of 5) for accelerometer x, y, and z values.
             xAcc = deque(()); yAcc = deque(())
-            
             # Initializing deque (with an intended size of 5) for gyroscope x, y, and z values.
             xGyro = deque(()); yGyro = deque(()); zGyro = deque(())
     
             # While highway is true, continuously monitor the Accelerometer/Gyroscope.
             while(onHighway):
+                builtinLed.toggle()
 #                 print("onHighway - Sleeping")
-                time.sleep(.5) #TEMPORARY TODO																		
+                time.sleep(.5) #TEMPORARY TODO
                 accel = accAndGyro.acceleration
                 gyro = accAndGyro.gyro
 
@@ -223,7 +222,6 @@ async def sensor_thread():
                             elif latDiff < 0: #going South
                                 currDirection = 0
                                 print("going South")
-
                         #active state
                         if xAcc.runAvg() < -3:
                             #transmit
@@ -244,11 +242,8 @@ async def sensor_thread():
                                 onHighway = False
                                 direction = currDirection
                                 print("exiting highway.")
-#                 print("offHighway - Sleeping")
-                time.sleep(5) #TEMPORARY TODO
-  #  await asyncio.sleep(5)  
-
-            
+                time.sleep(1) #TEMPORARY TODO
+        await asyncio.sleep(.5)            
 def lora_thread():
     global hazard_flag, flagBit, transmitted_flag, receivedString, direction, currDirection, onHighway, haz_type
     
@@ -284,7 +279,6 @@ def lora_thread():
             receivedString = None
             time.sleep(3)
 
-###################################################### End of LoRa Thread ##############################################################################################
 
 # Transmit code for LoRa -- Called in LoRa thread when hazard flag or flagbit is high.
 def transmit_hazard(hazard_location):
@@ -313,6 +307,9 @@ def transmit_hazard(hazard_location):
     time.sleep(2)
     uart_lora.read()
     lock.release()
+###################################################### End of Transmitter ##############################################################################################
+
+###################################################### Hazard received method ##############################################################################################
 
 def parse_message(receivedString):
     #TODO remember if message is a fluke, throw it away. also what if two messages conflict and the uart read is double the length.
@@ -355,11 +352,11 @@ def fromAhead(hazard_location):
     if(hazard_location == None):
         print("No hazard_location obj")
         return
-    print("Current Lat: ", currLat)
-    print("Current Lon: ", currLon)
-    print("Current Direction: ", currDirection)
-    print("Hazad location lat: ", hazard_location.lat)
-    print("Hazard location lon: ", hazard_location.lon)
+#     print("Current Lat: ", currLat)
+#     print("Current Lon: ", currLon)
+#     print("Current Direction: ", currDirection)
+#     print("Hazad location lat: ", hazard_location.lat)
+#     print("Hazard location lon: ", hazard_location.lon)
     with lock:
         print("From head locked")
         print("hazard loc.dir: ", hazard_location.direction)
@@ -404,12 +401,13 @@ def fromAhead(hazard_location):
     
 def identify_hazard(hazard_location, transmitting):
     global HazardArray, display_hazard
+    threshold = DecimalNumber("0.004")
     if(len(HazardArray) == 0):
         HazardArray.append(hazard_location)
-        if(not transmitting):
+        if(hazard_location.flag_counter > 2 and not transmitting):
             display_hazard = hazard_location
-            #display_on = True
             warn_user()
+        print("HazardArray: ", str(HazardArray))
         return hazard_location # no messages to identify, its new.
     else:
         #arrLength = len(HazardArray) 
@@ -419,10 +417,11 @@ def identify_hazard(hazard_location, transmitting):
             if(not fromAhead(check)): #TODO remove old data
                 HazardArray.pop(x)
                 continue
-            elif((hazard_location.lat - 0.004) <= check.lat <= (hazard_location.lat + 0.004) and (hazard_location.lon - 0.004) <= check.lon <= (hazard_location.lon + 0.004)):  #within a quarter mile 
+            elif((hazard_location.lat - threshold) <= check.lat <= (hazard_location.lat + threshold) and (hazard_location.lon - threshold) <= check.lon <= (hazard_location.lon + threshold)):  #within a quarter mile 
                     if(transmitting): #transmit code response (increment hazard once if indentified and return
                         if(check.flag_counter < 3):
-                            check.flag_counter += 1 
+                            check.flag_counter += 1
+                            print("flag counter = :", check.flag_counter)
                         return check
                     elif(check.flag_counter < hazard_location.flag_counter): #if hazard in array has a flag count > than what is alr in array, ignore it.
                         if(hazard_location.flag_counter > 2 and check.flag_counter != hazard_location.flag_counter): #if received message has a warning hazard threshold and has user has not been warned with it yet.
@@ -430,12 +429,14 @@ def identify_hazard(hazard_location, transmitting):
                             display_hazard = check
                             warn_user()
                         check.flag_counter = hazard_location.flag_counter   # UPDATE COUNT VALUE IN HAZARD ARRAY
+                    print("HazardArray in else 2: ", str(HazardArray))
                     return check # return the identified message
             else:
                 print("iterating through hazard array but not identified")
             x += 1
+        print("Hazard Array: ",str(HazardArray))
+        print("Hazard doesn't exist in the array")
         return(hazard_location) #hazard not existing in array, treat it as a new message
-    
     
 
 def warn_user():
@@ -508,7 +509,6 @@ def update_display(t):
         #int(lat)\
         #update based on number distance
         with lock:        
-            meanEarthRadius = DecimalNumber(str(3957.756))#miles
 #             dist = (math.acos(math.cos(math.radians(90 - currLat)) * math.cos(math.radians(90- hazard_location.lat)) + math.sin(math.radians(90 - currLat)) * math.sin(math.radians(90 - hazard_location.lat)) * math.cos(math.radians(currLon - hazard_location.lon))) * meanEarthRadius)
 #             dist = (acos(cos(radians(90 - currLat)) * cos(radians(90 - hazard_location.lat)) + sin(radians(90 - currLat)) * sin(radians(90 - hazard_location.lat)) * cos(radians(currLon - hazard_location.lon))) * meanEarthRadius)
             dist = distanceCalc(currLat, currLon, display_hazard.lat, display_hazard.lon)
@@ -541,38 +541,8 @@ def distanceCalc(lata, lona, latb, lonb):
 
     # Radius of Earth in kilometers. Use 3956 for miles
     r = DecimalNumber('3956')
-
     return c * r
 
-# def update_display(hazard_location):
-#     
-#     global display_timer
-#     print(hazard_location)
-#     if(not fromAhead(hazard_location)):
-#         #TODO set 0.0 at the top
-#         display_timer = Timer(period=5000, mode=Timer.ONE_SHOT, callback=turnoff_display)
-#         display_hazard = None
-#         
-#         masteri2c.write('0x41', '0')
-#         masteri2c.write('0x41', '0')
-#         return
-#     else:# hazard ahead and display on
-#         #int(lat)\
-#         #update based on number distance
-#         with lock:        
-#             meanEarthRadius = DecimalNumber(str(3957.756))#miles
-#             dist = (math.acos(math.cos(math.radians(90 - currLat)) * math.cos(math.radians(90- hazard_location.lat)) + math.sin(math.radians(90 - currLat)) * math.sin(math.radians(90 - hazard_location.lat)) * math.cos(math.radians(currLon - hazard_location.lon))) * meanEarthRadius)  
-#             print(dist, " miles")
-#             dist = str(dist)
-#             dotIndex = dist.index(".")
-#             firstDigit = dist[dotIndex -1:dotIndex]
-#             secondDigit = dist[dotIndex + 1:dotIndex + 2]
-#             
-#             masteri2c.writeto(0x41, str(firstDigit))
-#             masteri2c.writeto(0x41, str(secondDigit))
-#             #show on display                     
-#         return
-        #LCD 0.0
-        #print LCD 0.0 for 5s and then delete
-#turnon_display(Hazard(currDirection, currLat,currLon, 1))
-asyncio.run(sensor_thread()) 
+if __name__ == "__main__":
+    asyncio.run(sensor_thread()) 
+
