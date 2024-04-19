@@ -119,6 +119,7 @@ class Hazard:
         self.haz_type = haz_type
 # lock will allow us to make sure both functions don't try to update the flagBit at the same time.
 lock  = _thread.allocate_lock()
+thread_lock = _thread.allocate_lock()
 ################################################################################
 
 ###################### Program begins here ######################################## 
@@ -179,12 +180,13 @@ async def sensor_thread():
 #         onHighway = True
         if(onHighway):#start receiver thread and initialize sensor lists
             print("On Highway")
-            with lock:
-                if(thread_count == 0):
-                    time.sleep(0.1)
-                    _thread.start_new_thread(lora_thread,())
-                else:
-                    pass
+            thread_lock.acquire()    
+            if(thread_count == 0):
+                time.sleep(0.1)
+                _thread.start_new_thread(lora_thread,())
+            else:
+                pass
+            thread_lock.release()
             print("init sensor loop")
             DEQUE_SIZE = 5.0
             # Initializing deque (with an intended size of 5) for accelerometer x, y, and z values.
@@ -278,12 +280,12 @@ def lora_thread():
         #print(line)
         receivedString = uart_lora.read()
         if(not onHighway): #check if back to non-highway; kill thread.
-            lock.acquire()
+            thread_lock.acquire()
             print("exiting receiver thread")
             time.sleep(0.1)
             thread_count = 0
             _thread.exit()
-            lock.release()
+            thread_lock.release()
         elif((hazard_flag == 1)):#hazard detected, transmit hazard
             with lock:
                  transmit_hazard(Hazard(currDirection, currLat,currLon, 1, hazType)) #transmit current hazard (will override it if identified
