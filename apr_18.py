@@ -335,11 +335,11 @@ def transmit_hazard(hazard_location):
     hazard_flag = 0
     
     uart_lora.write(bytes("AT+MODE=TEST","utf-8"))
-    time.sleep(2)
+    time.sleep(0.5)
     uart_lora.read()
     print("going back to receive mode")
-#     uart_lora.write(bytes("AT+MODE=RXLRPKT" , "utf-8"))
-    time.sleep(2)
+    uart_lora.write(bytes("AT+MODE=RXLRPKT" , "utf-8"))
+    time.sleep(0.5)
     uart_lora.read()
 ###################################################### End of Transmitter ##############################################################################################
 
