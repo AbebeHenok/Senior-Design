@@ -178,7 +178,6 @@ async def sensor_thread():
             print("highway direction: ", direction)
        #direction = 0 #0 = east, 1 = west, etc
         print("checking onHighway")
-        onHighway = True
         direction = 2
         if(onHighway):#start receiver thread and initialize sensor lists
             print("On Highway")
